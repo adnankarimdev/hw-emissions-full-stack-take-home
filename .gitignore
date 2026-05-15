@@ -37,6 +37,9 @@ coverage/
 next-env.d.ts
 **/next-env.d.ts
 
+# Generated Prisma clients
+**/generated/prisma/
+
 # Next.js generated type files
 **/types/cache-life.d.ts
 **/types/routes.d.ts

@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ComplianceStatus {
+  WITHIN_LIMIT
+  LIMIT_EXCEEDED
+}
+
+enum OutboxEventStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+model Site {
+  id                   String        @id @default(uuid()) @db.Uuid
+  name                 String
+  emissionLimit        Decimal       @map("emission_limit") @db.Decimal(18, 6)
+  totalEmissionsToDate Decimal       @default(0) @map("total_emissions_to_date") @db.Decimal(18, 6)
+  metadata             Json
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+  ingestBatches        IngestBatch[]
+  measurements         Measurement[]
+
+  @@map("sites")
+}
+
+model IngestBatch {
+  id             String        @id @default(uuid()) @db.Uuid
+  siteId         String        @map("site_id") @db.Uuid
+  idempotencyKey String        @map("idempotency_key")
+  requestHash    String        @map("request_hash")
+  readingsCount  Int           @map("readings_count")
+  emissionsTotal Decimal       @map("emissions_total") @db.Decimal(18, 6)
+  createdAt      DateTime      @default(now()) @map("created_at")
+  site           Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  measurements   Measurement[]
+
+  @@unique([siteId, idempotencyKey])
+  @@index([siteId])
+  @@map("ingest_batches")
+}
+
+model Measurement {
+  id         String      @id @default(uuid()) @db.Uuid
+  siteId     String      @map("site_id") @db.Uuid
+  batchId    String      @map("batch_id") @db.Uuid
+  sourceId   String      @map("source_id")
+  measuredAt DateTime    @map("measured_at")
+  methaneKg  Decimal     @map("methane_kg") @db.Decimal(18, 6)
+  metadata   Json?
+  createdAt  DateTime    @default(now()) @map("created_at")
+  site       Site        @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  batch      IngestBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([siteId, measuredAt])
+  @@index([batchId])
+  @@map("measurements")
+}
+
+model OutboxEvent {
+  id            String            @id @default(uuid()) @db.Uuid
+  aggregateType String            @map("aggregate_type")
+  aggregateId   String            @map("aggregate_id")
+  eventType     String            @map("event_type")
+  payload       Json
+  status        OutboxEventStatus @default(PENDING)
+  attempts      Int               @default(0)
+  nextAttemptAt DateTime?         @map("next_attempt_at")
+  processedAt   DateTime?         @map("processed_at")
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  @@index([status, createdAt])
+  @@map("outbox_events")
+}
