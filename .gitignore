@@ -37,6 +37,11 @@ coverage/
 next-env.d.ts
 **/next-env.d.ts
 
+# Next.js generated type files
+**/types/cache-life.d.ts
+**/types/routes.d.ts
+**/types/validator.ts
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
