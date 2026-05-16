@@ -18,6 +18,7 @@ import { buildDashboardMetrics } from "@/features/dashboard/lib/dashboard-metric
 import { dashboardPlaceholder } from "@/features/dashboard/data/dashboard-placeholder-data"
 import { useSitesQuery } from "@/features/sites/api/site-queries"
 import { CreateSiteForm } from "@/features/sites/components/create-site-form"
+import { SiteMetricsPanel } from "@/features/sites/components/site-metrics-panel"
 
 export function DashboardPage() {
   const sitesQuery = useSitesQuery()
@@ -35,6 +36,7 @@ export function DashboardPage() {
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
             <EmissionsTrendPlaceholder data={dashboardPlaceholder.trend} />
             <div className="grid gap-4">
+              <SiteMetricsPanel sites={sites} />
               <CreateSiteForm />
               <ManualIngestionForm sites={sites} />
             </div>

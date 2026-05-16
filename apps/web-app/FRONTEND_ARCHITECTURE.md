@@ -38,7 +38,7 @@ The shared API client unwraps the backend response envelope and validates respon
 
 Query keys live under `lib/api/query-keys.ts` so invalidation remains consistent. Create-site and ingestion mutations invalidate the sites query after success instead of manually patching unrelated component state.
 
-The manual ingestion form preserves the submitted batch payload and idempotency key for retry actions. Retrying uses the exact same request body so the backend can demonstrate duplicate-safe handling without the frontend inventing its own deduplication behavior.
+The site metrics panel calls `GET /sites/:id/metrics` directly through `useSiteMetricsQuery`. The manual ingestion form preserves the submitted batch payload and idempotency key for retry actions. Retrying uses the exact same request body so the backend can demonstrate duplicate-safe handling without the frontend inventing its own deduplication behavior.
 
 Guidelines:
 
