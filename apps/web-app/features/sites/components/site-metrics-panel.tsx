@@ -53,7 +53,7 @@ export function SiteMetricsPanel({ sites }: SiteMetricsPanelProps) {
         </div>
         <CardDescription>Compliance summary from the metrics endpoint</CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-4">
+      <CardContent className="grid gap-4 overflow-x-auto">
         {sites.length === 0 ? (
           <EmptyMetricsState />
         ) : (

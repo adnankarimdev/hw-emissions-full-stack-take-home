@@ -5,6 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   ActivityIcon,
+  FlaskConicalIcon,
   GaugeIcon,
   MessageSquareIcon,
 } from "lucide-react"
@@ -31,6 +32,11 @@ const primaryNavItems = [
     title: "Chat",
     href: "/chat",
     icon: MessageSquareIcon,
+  },
+  {
+    title: "Simulation",
+    href: "/simulation",
+    icon: FlaskConicalIcon,
   },
 ]
 

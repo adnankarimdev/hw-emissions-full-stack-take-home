@@ -6,6 +6,7 @@ The web app uses a feature-first Next.js App Router structure. Routes stay thin 
 app/
   dashboard/                  route entry points
   chat/                       persisted operations chat sessions
+  simulation/                 evaluator-facing concurrency simulation
   api/chat/                   AI SDK streaming route and tool orchestration
   providers.tsx               client-side provider composition
 
@@ -17,6 +18,7 @@ components/
 features/
   dashboard/                  dashboard page composition and read models
   chat/                       operations copilot, renderer catalog, tools, persistence
+  simulation/                 same-site concurrent ingestion harness
   ingestion/                  manual ingestion UI and API integration seam
   sites/                      site status UI, API contracts, queries, and types
 
@@ -53,6 +55,12 @@ Dashboard reads expose explicit loading, empty, and error states. Initial site l
 Manual ingestion keeps the last submitted `IngestionBatchDraft` separate from editable form state. This lets an operator change the form while the retry action still resends the exact retained payload and idempotency key from the previous attempt. Successful duplicate retries are surfaced in the dashboard summary as session-level retry telemetry, while backend totals remain the source of truth.
 
 Successful ingestion invalidates the site list, selected site metrics, and per-site emissions trend query. The graph therefore refreshes from persisted measurements instead of maintaining a separate client-side chart model.
+
+## Simulation Harness
+
+The simulation route is intentionally a thin reviewer-facing harness over the same production API clients used by the dashboard. It creates an isolated site, sends multiple concurrent `POST /ingest` requests with unique idempotency keys to that same site, then reads `GET /sites/:id/metrics` to compare the expected total with the persisted total.
+
+This keeps the demo honest: the UI does not mock concurrency, patch totals locally, or bypass the backend. A passing simulation means the real deployed API, Prisma transaction, row lock, and denormalized site total all behaved consistently under simultaneous writes.
 
 ## Operations Chat
 

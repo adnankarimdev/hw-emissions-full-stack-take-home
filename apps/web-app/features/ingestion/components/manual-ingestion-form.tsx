@@ -3,7 +3,9 @@
 import { FormEvent, useMemo, useState } from "react"
 import {
   AlertCircleIcon,
+  CalendarIcon,
   CheckCircle2Icon,
+  ClockIcon,
   Loader2Icon,
   RadioTowerIcon,
   RefreshCwIcon,
@@ -14,6 +16,7 @@ import { toast } from "sonner"
 import { z } from "zod"
 
 import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
 import {
   Card,
   CardContent,
@@ -24,6 +27,11 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
@@ -39,6 +47,7 @@ import type {
 import type { SiteSummary } from "@/features/sites/types"
 import { getApiErrorMessage } from "@/lib/api/client"
 import { formatKilograms } from "@/lib/format/emissions"
+import { cn } from "@/lib/utils"
 
 const manualIngestionFormSchema = z.object({
   siteId: z.uuid("Select a monitored site."),
@@ -67,6 +76,22 @@ type ManualIngestionFormProps = {
   onIngestionSuccess?: (result: IngestionResult) => void
   sites: SiteSummary[]
 }
+
+type TimePeriod = "AM" | "PM"
+
+type TimeParts = {
+  hour: string
+  minute: string
+  period: TimePeriod
+}
+
+const HOUR_OPTIONS = Array.from({ length: 12 }, (_, index) =>
+  padDatePart(index + 1)
+)
+const MINUTE_OPTIONS = Array.from({ length: 60 }, (_, index) =>
+  padDatePart(index)
+)
+const PERIOD_OPTIONS = ["AM", "PM"] as const
 
 const initialFormState: ManualIngestionFormState = {
   siteId: "",
@@ -185,7 +210,7 @@ export function ManualIngestionForm({
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit} noValidate>
-        <CardContent className="grid gap-4">
+        <CardContent className="grid gap-4 overflow-x-auto">
           <FormField error={errors.siteId} fieldId="ingest-site" label="Site">
             <Select
               value={selectedSiteId}
@@ -272,12 +297,11 @@ export function ManualIngestionForm({
             fieldId="measured-at"
             label="Measured At"
           >
-            <Input
+            <MeasuredAtPicker
               id="measured-at"
-              type="datetime-local"
               value={formState.measuredAt}
-              onChange={(event) => updateField("measuredAt", event.target.value)}
-              aria-invalid={Boolean(errors.measuredAt)}
+              onChange={(value) => updateField("measuredAt", value)}
+              hasError={Boolean(errors.measuredAt)}
             />
           </FormField>
           {selectedSite ? (
@@ -338,6 +362,149 @@ function FormField({ children, error, fieldId, label }: FormFieldProps) {
       <Label htmlFor={fieldId}>{label}</Label>
       {children}
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    </div>
+  )
+}
+
+type MeasuredAtPickerProps = {
+  hasError: boolean
+  id: string
+  onChange: (value: string) => void
+  value: string
+}
+
+function MeasuredAtPicker({
+  hasError,
+  id,
+  onChange,
+  value,
+}: MeasuredAtPickerProps) {
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false)
+  const selectedDate = parseDateTimeLocalValue(value)
+  const timeParts = selectedDate ? toTimeParts(selectedDate) : toTimeParts(new Date())
+
+  function handleDateSelect(date: Date | undefined) {
+    if (!date) {
+      return
+    }
+
+    onChange(combineDateAndTime(date, timeParts))
+    setIsCalendarOpen(false)
+  }
+
+  function handleTimeChange(nextTime: TimeParts) {
+    const date = selectedDate ?? new Date()
+
+    onChange(combineDateAndTime(date, nextTime))
+  }
+
+  return (
+    <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_15rem]">
+      <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            id={id}
+            type="button"
+            variant="outline"
+            className={cn(
+              "justify-start text-left font-normal",
+              !selectedDate && "text-muted-foreground"
+            )}
+            aria-invalid={hasError}
+          >
+            <CalendarIcon />
+            {selectedDate ? formatMeasuredAtDate(selectedDate) : "Select date"}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-auto p-0">
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={handleDateSelect}
+            captionLayout="dropdown"
+          />
+        </PopoverContent>
+      </Popover>
+      <TimePicker
+        hasError={hasError}
+        onChange={handleTimeChange}
+        value={timeParts}
+      />
+    </div>
+  )
+}
+
+type TimePickerProps = {
+  hasError: boolean
+  onChange: (value: TimeParts) => void
+  value: TimeParts
+}
+
+function TimePicker({ hasError, onChange, value }: TimePickerProps) {
+  return (
+    <div className="grid grid-cols-[1fr_1fr_1fr] gap-2">
+      <div className="relative">
+        <ClockIcon className="pointer-events-none absolute top-1/2 left-2.5 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Select
+          value={value.hour}
+          onValueChange={(hour) => onChange({ ...value, hour })}
+        >
+          <SelectTrigger
+            aria-label="Measurement hour"
+            aria-invalid={hasError}
+            className="w-full pl-8"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent align="start">
+            {HOUR_OPTIONS.map((hour) => (
+              <SelectItem key={hour} value={hour}>
+                {hour}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <Select
+        value={value.minute}
+        onValueChange={(minute) => onChange({ ...value, minute })}
+      >
+        <SelectTrigger
+          aria-label="Measurement minute"
+          aria-invalid={hasError}
+          className="w-full"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent align="start">
+          {MINUTE_OPTIONS.map((minute) => (
+            <SelectItem key={minute} value={minute}>
+              {minute}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={value.period}
+        onValueChange={(period) =>
+          onChange({ ...value, period: toTimePeriod(period) })
+        }
+      >
+        <SelectTrigger
+          aria-label="Measurement period"
+          aria-invalid={hasError}
+          className="w-full"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent align="start">
+          {PERIOD_OPTIONS.map((period) => (
+            <SelectItem key={period} value={period}>
+              {period}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   )
 }
@@ -541,6 +708,59 @@ function isManualIngestionFormField(
 
 function createIdempotencyKey() {
   return `manual-${globalThis.crypto.randomUUID()}`
+}
+
+function parseDateTimeLocalValue(value: string) {
+  if (!value) {
+    return undefined
+  }
+
+  const date = new Date(value)
+
+  return Number.isNaN(date.getTime()) ? undefined : date
+}
+
+function combineDateAndTime(date: Date, time: TimeParts) {
+  const hour = clampTimePart(Number(time.hour), 12)
+  const hours = time.period === "PM" ? (hour % 12) + 12 : hour % 12
+  const minutes = clampTimePart(Number(time.minute), 59)
+
+  return toDateTimeLocalValue(
+    new Date(date.getFullYear(), date.getMonth(), date.getDate(), hours, minutes)
+  )
+}
+
+function clampTimePart(value: number, max: number) {
+  if (!Number.isFinite(value)) {
+    return 0
+  }
+
+  return Math.min(Math.max(Math.trunc(value), 0), max)
+}
+
+function formatMeasuredAtDate(date: Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+  }).format(date)
+}
+
+function toTimeParts(date: Date): TimeParts {
+  const hours = date.getHours()
+  const hour = hours % 12 || 12
+
+  return {
+    hour: padDatePart(hour),
+    minute: padDatePart(date.getMinutes()),
+    period: hours >= 12 ? "PM" : "AM",
+  }
+}
+
+function toTimePeriod(value: string): TimePeriod {
+  return value === "PM" ? "PM" : "AM"
+}
+
+function padDatePart(value: number) {
+  return value.toString().padStart(2, "0")
 }
 
 function toDateTimeLocalValue(date: Date) {

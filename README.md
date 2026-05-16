@@ -12,6 +12,7 @@ The implementation focuses on the hard part of the prompt: accepting methane rea
 - `GET /sites/:id/emissions-trend` returns a real per-site emissions time series from persisted measurements.
 - The dashboard lists sites, shows compliance metrics, graphs per-site cumulative emissions, supports manual ingestion, and demonstrates retry behavior without double-counting.
 - The operations chat lets an admin ask for live metrics, render dashboard widgets, create sites, and access ingestion workflows through a constrained AI-rendered UI.
+- The simulation page gives reviewers a one-click way to run concurrent same-site ingestion requests against the real API and verify the persisted total.
 - Successful and error API responses use a consistent platform envelope.
 - Backend architecture uses NestJS modules, service/repository boundaries, a Command/Processor workflow for ingestion, Prisma transactions, and a transactional outbox table.
 
@@ -136,6 +137,13 @@ Optional chat flow:
 2. Ask for the dashboard overview or a per-site trend; the assistant renders existing dashboard widgets in the conversation.
 3. Ask to create a site or submit readings; the assistant asks for missing fields before using mutation tools.
 
+Optional concurrency simulation:
+
+1. Open `http://localhost:3000/simulation`.
+2. Keep the default 10 concurrent sources, or adjust the source count and methane amount.
+3. Click **Run Simulation**.
+4. Confirm the expected total matches the persisted site total after all requests finish.
+
 The important behavior is that retry sends the exact retained batch payload and idempotency key. The backend returns `duplicate: true` for an identical retry and does not create duplicate measurements or increment `total_emissions_to_date` again.
 
 ## API Endpoints
@@ -238,9 +246,10 @@ pnpm build
 | `GET /sites/:id/emissions-trend` analytics | Implemented | Builds a per-site UTC daily trend from persisted measurements. |
 | Monitoring dashboard | Implemented | Real per-site trend graph, site list, metrics panel, create-site form, manual ingestion form, retry UX. |
 | Operations chat | Implemented | AI SDK route, Postgres-backed sessions, constrained renderer catalog, dashboard read tools, create-site and ingestion tools. |
+| Reviewer simulation | Implemented | `/simulation` creates an isolated site and fires concurrent ingestion requests against the real backend. |
 | Command/Processor architecture | Implemented | Ingestion workflow is modeled as command plus processor. |
 | Transactional outbox | Implemented | Outbox event is written in the ingestion transaction. |
-| Concurrency protection | Implemented | Site totals use database-level atomic increment inside the transaction. |
+| Concurrency protection | Implemented | Same-site ingestion uses pessimistic row locking plus an atomic increment inside the transaction. |
 | Type-safe boundaries | Implemented | Backend and frontend validate API inputs/outputs with Zod schemas. |
 | Tests | Implemented | Backend unit tests and e2e test cover idempotency and metrics. |
 
