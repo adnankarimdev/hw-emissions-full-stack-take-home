@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react"
 import {
+  AlertCircleIcon,
   CheckCircle2Icon,
   Loader2Icon,
   RadioTowerIcon,
@@ -63,6 +64,7 @@ type ManualIngestionFormErrors = Partial<
 >
 
 type ManualIngestionFormProps = {
+  onIngestionSuccess?: (result: IngestionResult) => void
   sites: SiteSummary[]
 }
 
@@ -74,7 +76,10 @@ const initialFormState: ManualIngestionFormState = {
   measuredAt: "",
 }
 
-export function ManualIngestionForm({ sites }: ManualIngestionFormProps) {
+export function ManualIngestionForm({
+  onIngestionSuccess,
+  sites,
+}: ManualIngestionFormProps) {
   const [formState, setFormState] =
     useState<ManualIngestionFormState>(initialFormState)
   const [errors, setErrors] = useState<ManualIngestionFormErrors>({})
@@ -88,6 +93,8 @@ export function ManualIngestionForm({ sites }: ManualIngestionFormProps) {
     () => sites.find((site) => site.id === selectedSiteId) ?? null,
     [selectedSiteId, sites]
   )
+  const canRetryLastBatch =
+    Boolean(lastSubmittedBatch) && !ingestMutation.isPending
 
   function updateField(field: ManualIngestionFormField, value: string) {
     setFormState((current) => ({
@@ -98,6 +105,7 @@ export function ManualIngestionForm({ sites }: ManualIngestionFormProps) {
       ...current,
       [field]: undefined,
     }))
+    ingestMutation.reset()
   }
 
   function resetForNewBatch() {
@@ -109,6 +117,7 @@ export function ManualIngestionForm({ sites }: ManualIngestionFormProps) {
     setLastResult(null)
     setLastSubmittedBatch(null)
     setErrors({})
+    ingestMutation.reset()
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -133,10 +142,12 @@ export function ManualIngestionForm({ sites }: ManualIngestionFormProps) {
 
   function submitBatch(batch: IngestionBatchDraft) {
     setErrors({})
+    setLastResult(null)
     setLastSubmittedBatch(batch)
     ingestMutation.mutate(batch, {
       onSuccess: (result) => {
         setLastResult(result)
+        onIngestionSuccess?.(result)
         if (!result.duplicate) {
           setFormState((current) => ({
             ...current,
@@ -156,6 +167,12 @@ export function ManualIngestionForm({ sites }: ManualIngestionFormProps) {
     })
   }
 
+  function retryLastBatch() {
+    if (lastSubmittedBatch) {
+      submitBatch(lastSubmittedBatch)
+    }
+  }
+
   return (
     <Card id="ingestion">
       <CardHeader>
@@ -163,7 +180,9 @@ export function ManualIngestionForm({ sites }: ManualIngestionFormProps) {
           <RadioTowerIcon className="size-4 text-muted-foreground" />
           <CardTitle>Manual Ingestion</CardTitle>
         </div>
-        <CardDescription>Submit a methane reading batch for a monitored site</CardDescription>
+        <CardDescription>
+          Submit a methane reading batch for a monitored site
+        </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit} noValidate>
         <CardContent className="grid gap-4">
@@ -267,12 +286,17 @@ export function ManualIngestionForm({ sites }: ManualIngestionFormProps) {
               {formatKilograms(selectedSite.totalEmissionsKg)}
             </p>
           ) : null}
-          {lastResult ? <IngestionResultSummary result={lastResult} /> : null}
-          {ingestMutation.isError ? (
-            <p role="alert" className="text-sm text-destructive">
-              {getApiErrorMessage(ingestMutation.error)}
-            </p>
-          ) : null}
+          <IngestionAttemptStatus
+            batch={lastSubmittedBatch}
+            errorMessage={
+              ingestMutation.isError
+                ? getApiErrorMessage(ingestMutation.error)
+                : null
+            }
+            isPending={ingestMutation.isPending}
+            onRetry={retryLastBatch}
+            result={lastResult}
+          />
         </CardContent>
         <CardFooter className="grid gap-2 pt-4 sm:grid-cols-2">
           <Button
@@ -289,15 +313,11 @@ export function ManualIngestionForm({ sites }: ManualIngestionFormProps) {
           <Button
             type="button"
             variant="outline"
-            disabled={!lastSubmittedBatch || ingestMutation.isPending}
-            onClick={() => {
-              if (lastSubmittedBatch) {
-                submitBatch(lastSubmittedBatch)
-              }
-            }}
+            disabled={!canRetryLastBatch}
+            onClick={retryLastBatch}
           >
             <RotateCcwIcon />
-            Retry Same Batch
+            Retry Last Batch
           </Button>
         </CardFooter>
       </form>
@@ -323,21 +343,128 @@ function FormField({ children, error, fieldId, label }: FormFieldProps) {
 }
 
 type IngestionResultSummaryProps = {
+  batch: IngestionBatchDraft
   result: IngestionResult
 }
 
-function IngestionResultSummary({ result }: IngestionResultSummaryProps) {
+type IngestionAttemptStatusProps = {
+  batch: IngestionBatchDraft | null
+  errorMessage: string | null
+  isPending: boolean
+  onRetry: () => void
+  result: IngestionResult | null
+}
+
+function IngestionAttemptStatus({
+  batch,
+  errorMessage,
+  isPending,
+  onRetry,
+  result,
+}: IngestionAttemptStatusProps) {
+  if (!batch) {
+    return null
+  }
+
+  if (isPending) {
+    return (
+      <div className="rounded-md border bg-muted/40 p-3 text-sm">
+        <div className="flex items-center gap-2 font-medium">
+          <Loader2Icon className="size-4 animate-spin text-muted-foreground" />
+          Submitting batch
+        </div>
+        <BatchFacts batch={batch} />
+      </div>
+    )
+  }
+
+  if (errorMessage) {
+    return (
+      <div
+        role="alert"
+        className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm"
+      >
+        <div className="flex items-start gap-2">
+          <AlertCircleIcon className="mt-0.5 size-4 text-destructive" />
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-destructive">Batch not confirmed</p>
+            <p className="mt-1 text-xs text-muted-foreground">{errorMessage}</p>
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+            <RotateCcwIcon />
+            Retry
+          </Button>
+        </div>
+        <BatchFacts batch={batch} />
+      </div>
+    )
+  }
+
+  if (result) {
+    return <IngestionResultSummary batch={batch} result={result} />
+  }
+
+  return null
+}
+
+function IngestionResultSummary({ batch, result }: IngestionResultSummaryProps) {
   return (
     <div className="rounded-md border bg-muted/40 p-3 text-sm">
       <div className="flex items-center gap-2 font-medium">
         <CheckCircle2Icon className="size-4 text-emerald-600" />
         {result.duplicate ? "Duplicate safely ignored" : "Batch accepted"}
       </div>
-      <div className="mt-2 grid gap-1 text-xs text-muted-foreground">
-        <p>Readings accepted: {result.acceptedCount}</p>
-        <p>Total emissions: {formatKilograms(result.totalEmissionsToDate)}</p>
-        <p>Compliance: {result.complianceStatus}</p>
+      <div className="mt-2 grid gap-2 text-xs text-muted-foreground">
+        <BatchFacts batch={batch} />
+        <div className="grid gap-2 sm:grid-cols-3">
+          <BatchFact label="Batch ID" value={result.batchId} />
+          <BatchFact
+            label="Readings Accepted"
+            value={String(result.acceptedCount)}
+          />
+          <BatchFact
+            label="Site Total"
+            value={formatKilograms(result.totalEmissionsToDate)}
+          />
+        </div>
+        <p>
+          Compliance:{" "}
+          <span className="font-medium text-foreground">
+            {result.complianceStatus}
+          </span>
+        </p>
+        {result.duplicate ? (
+          <p className="text-amber-700 dark:text-amber-400">
+            Duplicate response confirmed; totals were not incremented again.
+          </p>
+        ) : null}
       </div>
+    </div>
+  )
+}
+
+function BatchFacts({ batch }: { batch: IngestionBatchDraft }) {
+  const emissionsTotal = batch.readings.reduce(
+    (total, reading) => total + reading.methaneKg,
+    0
+  )
+
+  return (
+    <div className="mt-2 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+      <BatchFact label="Last Batch Key" value={batch.idempotencyKey} />
+      <BatchFact
+        label="Batch Emissions"
+        value={formatKilograms(emissionsTotal)}
+      />
+    </div>
+  )
+}
+
+function BatchFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-md border bg-background/60 px-2 py-1.5">
+      <p className="text-[11px] uppercase text-muted-foreground">{label}</p>
+      <p className="break-all font-mono text-xs text-foreground">{value}</p>
     </div>
   )
 }

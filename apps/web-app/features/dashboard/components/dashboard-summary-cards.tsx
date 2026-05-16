@@ -11,9 +11,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import type { DashboardMetric } from "@/features/dashboard/types"
 
 type DashboardSummaryCardsProps = {
+  isLoading?: boolean
   metrics: DashboardMetric[]
 }
 
@@ -31,9 +33,15 @@ const toneClassName: Record<DashboardMetric["tone"], string> = {
   danger: "text-destructive",
 }
 
-export function DashboardSummaryCards({ metrics }: DashboardSummaryCardsProps) {
+export function DashboardSummaryCards({
+  isLoading = false,
+  metrics,
+}: DashboardSummaryCardsProps) {
   return (
-    <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <section
+      aria-busy={isLoading}
+      className="grid gap-4 md:grid-cols-2 xl:grid-cols-4"
+    >
       {metrics.map((metric) => {
         const Icon = iconByMetricId[metric.id as keyof typeof iconByMetricId]
 
@@ -42,10 +50,21 @@ export function DashboardSummaryCards({ metrics }: DashboardSummaryCardsProps) {
             <CardHeader className="flex flex-row items-start justify-between gap-4">
               <div className="space-y-1">
                 <CardDescription>{metric.label}</CardDescription>
-                <CardTitle className="text-2xl font-semibold tabular-nums">
-                  {metric.value}
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">{metric.detail}</p>
+                {isLoading ? (
+                  <>
+                    <Skeleton className="h-8 w-24" />
+                    <Skeleton className="h-4 w-32" />
+                  </>
+                ) : (
+                  <>
+                    <CardTitle className="text-2xl font-semibold tabular-nums">
+                      {metric.value}
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      {metric.detail}
+                    </p>
+                  </>
+                )}
               </div>
               {Icon ? (
                 <Icon className={toneClassName[metric.tone]} />

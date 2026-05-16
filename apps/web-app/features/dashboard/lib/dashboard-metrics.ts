@@ -2,7 +2,14 @@ import type { DashboardMetric } from "@/features/dashboard/types"
 import type { SiteSummary } from "@/features/sites/types"
 import { formatKilograms, formatPercent } from "@/lib/format/emissions"
 
-export function buildDashboardMetrics(sites: SiteSummary[]): DashboardMetric[] {
+type BuildDashboardMetricsOptions = {
+  duplicateRetries: number
+}
+
+export function buildDashboardMetrics(
+  sites: SiteSummary[],
+  options: BuildDashboardMetricsOptions = { duplicateRetries: 0 }
+): DashboardMetric[] {
   const totalEmissionsKg = sites.reduce(
     (total, site) => total + site.totalEmissionsKg,
     0
@@ -32,9 +39,9 @@ export function buildDashboardMetrics(sites: SiteSummary[]): DashboardMetric[] {
     {
       id: "duplicate-retries",
       label: "Duplicate Retries",
-      value: "0",
-      detail: "Available after ingestion telemetry",
-      tone: "neutral",
+      value: String(options.duplicateRetries),
+      detail: "Duplicate-safe retries this session",
+      tone: options.duplicateRetries > 0 ? "warning" : "neutral",
     },
     {
       id: "active-alerts",

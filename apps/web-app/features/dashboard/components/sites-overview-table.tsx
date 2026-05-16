@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -22,10 +23,14 @@ import {
 } from "@/lib/format/emissions"
 
 type SitesOverviewTableProps = {
+  isLoading?: boolean
   sites: SiteSummary[]
 }
 
-export function SitesOverviewTable({ sites }: SitesOverviewTableProps) {
+export function SitesOverviewTable({
+  isLoading = false,
+  sites,
+}: SitesOverviewTableProps) {
   return (
     <Card id="sites">
       <CardHeader>
@@ -44,8 +49,9 @@ export function SitesOverviewTable({ sites }: SitesOverviewTableProps) {
               <TableHead className="text-right">Latest Reading</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
-            {sites.length === 0 ? (
+          <TableBody aria-busy={isLoading}>
+            {isLoading ? <SitesTableSkeleton /> : null}
+            {!isLoading && sites.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={6}
@@ -55,36 +61,65 @@ export function SitesOverviewTable({ sites }: SitesOverviewTableProps) {
                 </TableCell>
               </TableRow>
             ) : null}
-            {sites.map((site) => {
-              const limitUsed = site.totalEmissionsKg / site.emissionLimitKg
+            {!isLoading
+              ? sites.map((site) => {
+                  const limitUsed =
+                    site.totalEmissionsKg / site.emissionLimitKg
 
-              return (
-                <TableRow key={site.id}>
-                  <TableCell>
-                    <div className="font-medium">{site.name}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {site.location}
-                    </div>
-                  </TableCell>
-                  <TableCell>{site.operator}</TableCell>
-                  <TableCell>
-                    <SiteStatusBadge status={site.status} />
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatKilograms(site.totalEmissionsKg)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatPercent(limitUsed)}
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {formatReadingTimestamp(site.latestReadingAt)}
-                  </TableCell>
-                </TableRow>
-              )
-            })}
+                  return (
+                    <TableRow key={site.id}>
+                      <TableCell>
+                        <div className="font-medium">{site.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {site.location}
+                        </div>
+                      </TableCell>
+                      <TableCell>{site.operator}</TableCell>
+                      <TableCell>
+                        <SiteStatusBadge status={site.status} />
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatKilograms(site.totalEmissionsKg)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatPercent(limitUsed)}
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {formatReadingTimestamp(site.latestReadingAt)}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              : null}
           </TableBody>
         </Table>
       </CardContent>
     </Card>
   )
+}
+
+function SitesTableSkeleton() {
+  return Array.from({ length: 3 }, (_, index) => (
+    <TableRow key={index}>
+      <TableCell>
+        <Skeleton className="h-5 w-36" />
+        <Skeleton className="mt-2 h-4 w-28" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-5 w-28" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-6 w-24" />
+      </TableCell>
+      <TableCell className="text-right">
+        <Skeleton className="ml-auto h-5 w-20" />
+      </TableCell>
+      <TableCell className="text-right">
+        <Skeleton className="ml-auto h-5 w-16" />
+      </TableCell>
+      <TableCell className="text-right">
+        <Skeleton className="ml-auto h-5 w-24" />
+      </TableCell>
+    </TableRow>
+  ))
 }
