@@ -25,12 +25,30 @@ import {
 type SitesOverviewTableProps = {
   isLoading?: boolean
   sites: SiteSummary[]
+  variant?: "card" | "embedded"
 }
 
 export function SitesOverviewTable({
   isLoading = false,
   sites,
+  variant = "card",
 }: SitesOverviewTableProps) {
+  if (variant === "embedded") {
+    return (
+      <section id="sites" className="border-t pt-5">
+        <div className="mb-3">
+          <h2 className="font-heading text-base font-medium leading-normal">
+            Site Performance
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Current totals and compliance status
+          </p>
+        </div>
+        <SitesTable isLoading={isLoading} sites={sites} />
+      </section>
+    )
+  }
+
   return (
     <Card id="sites">
       <CardHeader>
@@ -38,63 +56,76 @@ export function SitesOverviewTable({
         <CardDescription>Current totals and compliance status</CardDescription>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Site</TableHead>
-              <TableHead>Operator</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead className="text-right">Limit Used</TableHead>
-              <TableHead className="text-right">Latest Reading</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody aria-busy={isLoading}>
-            {isLoading ? <SitesTableSkeleton /> : null}
-            {!isLoading && sites.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  No sites have been created yet.
-                </TableCell>
-              </TableRow>
-            ) : null}
-            {!isLoading
-              ? sites.map((site) => {
-                  const limitUsed =
-                    site.totalEmissionsKg / site.emissionLimitKg
-
-                  return (
-                    <TableRow key={site.id}>
-                      <TableCell>
-                        <div className="font-medium">{site.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {site.location}
-                        </div>
-                      </TableCell>
-                      <TableCell>{site.operator}</TableCell>
-                      <TableCell>
-                        <SiteStatusBadge status={site.status} />
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatKilograms(site.totalEmissionsKg)}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatPercent(limitUsed)}
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {formatReadingTimestamp(site.latestReadingAt)}
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
-              : null}
-          </TableBody>
-        </Table>
+        <SitesTable isLoading={isLoading} sites={sites} />
       </CardContent>
     </Card>
+  )
+}
+
+function SitesTable({
+  isLoading,
+  sites,
+}: {
+  isLoading: boolean
+  sites: SiteSummary[]
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Site</TableHead>
+            <TableHead>Operator</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Total</TableHead>
+            <TableHead className="text-right">Limit Used</TableHead>
+            <TableHead className="text-right">Latest Reading</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody aria-busy={isLoading}>
+          {isLoading ? <SitesTableSkeleton /> : null}
+          {!isLoading && sites.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={6}
+                className="h-24 text-center text-muted-foreground"
+              >
+                No sites have been created yet.
+              </TableCell>
+            </TableRow>
+          ) : null}
+          {!isLoading
+            ? sites.map((site) => {
+                const limitUsed = site.totalEmissionsKg / site.emissionLimitKg
+
+                return (
+                  <TableRow key={site.id}>
+                    <TableCell>
+                      <div className="font-medium">{site.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {site.location}
+                      </div>
+                    </TableCell>
+                    <TableCell>{site.operator}</TableCell>
+                    <TableCell>
+                      <SiteStatusBadge status={site.status} />
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatKilograms(site.totalEmissionsKg)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatPercent(limitUsed)}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground">
+                      {formatReadingTimestamp(site.latestReadingAt)}
+                    </TableCell>
+                  </TableRow>
+                )
+              })
+            : null}
+        </TableBody>
+      </Table>
+    </div>
   )
 }
 

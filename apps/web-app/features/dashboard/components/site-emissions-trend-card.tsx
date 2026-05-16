@@ -1,5 +1,6 @@
 "use client"
 
+import type { ReactNode } from "react"
 import { useMemo, useState } from "react"
 import {
   ActivityIcon,
@@ -36,6 +37,7 @@ import { getApiErrorMessage } from "@/lib/api/client"
 import { formatKilograms, formatPercent } from "@/lib/format/emissions"
 
 type SiteEmissionsTrendCardProps = {
+  children?: ReactNode
   isLoadingSites: boolean
   sites: SiteSummary[]
 }
@@ -54,6 +56,7 @@ const chartConfig = {
 } satisfies ChartConfig
 
 export function SiteEmissionsTrendCard({
+  children,
   isLoadingSites,
   sites,
 }: SiteEmissionsTrendCardProps) {
@@ -68,7 +71,7 @@ export function SiteEmissionsTrendCard({
   const trendQuery = useSiteEmissionsTrendQuery(effectiveSiteId, trendDays)
 
   return (
-    <Card>
+    <Card className="self-start">
       <CardHeader className="gap-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
@@ -103,18 +106,24 @@ export function SiteEmissionsTrendCard({
         </div>
       </CardHeader>
       <CardContent>
-        {sites.length === 0 && !isLoadingSites ? (
-          <EmptyTrendState />
-        ) : trendQuery.isError ? (
-          <TrendErrorState
-            message={getApiErrorMessage(trendQuery.error)}
-            onRetry={() => void trendQuery.refetch()}
-          />
-        ) : trendQuery.isPending || isLoadingSites ? (
-          <TrendSkeleton />
-        ) : trendQuery.data ? (
-          <TrendContent siteName={selectedSite?.name} trend={trendQuery.data} />
-        ) : null}
+        <div className="grid gap-5">
+          {sites.length === 0 && !isLoadingSites ? (
+            <EmptyTrendState />
+          ) : trendQuery.isError ? (
+            <TrendErrorState
+              message={getApiErrorMessage(trendQuery.error)}
+              onRetry={() => void trendQuery.refetch()}
+            />
+          ) : trendQuery.isPending || isLoadingSites ? (
+            <TrendSkeleton />
+          ) : trendQuery.data ? (
+            <TrendContent
+              siteName={selectedSite?.name}
+              trend={trendQuery.data}
+            />
+          ) : null}
+          {children}
+        </div>
       </CardContent>
     </Card>
   )

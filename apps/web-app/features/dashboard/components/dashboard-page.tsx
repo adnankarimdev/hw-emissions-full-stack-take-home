@@ -53,7 +53,13 @@ export function DashboardPage() {
             <SiteEmissionsTrendCard
               isLoadingSites={sitesQuery.isPending}
               sites={sites}
-            />
+            >
+              <SitesOverviewTable
+                isLoading={sitesQuery.isPending}
+                sites={sites}
+                variant="embedded"
+              />
+            </SiteEmissionsTrendCard>
             <div className="grid gap-4">
               <SiteMetricsPanel sites={sites} />
               <CreateSiteForm />
@@ -63,7 +69,6 @@ export function DashboardPage() {
               />
             </div>
           </div>
-          <SitesOverviewTable isLoading={sitesQuery.isPending} sites={sites} />
         </div>
       </main>
     </DashboardShell>
