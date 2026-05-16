@@ -49,7 +49,7 @@ import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import type { ChatRenderSpec } from "@/features/chat/renderer/spec"
 import { ChatRenderedUi } from "@/features/chat/renderer/catalog"
-import type { ChatSessionSummary } from "@/features/chat/server/chat-store"
+import type { ChatSessionSummary } from "@/features/chat/types"
 import { cn } from "@/lib/utils"
 
 type ChatWorkspaceProps = {

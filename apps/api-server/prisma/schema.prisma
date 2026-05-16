@@ -81,3 +81,31 @@ model OutboxEvent {
   @@index([status, createdAt])
   @@map("outbox_events")
 }
+
+model ChatSession {
+  id        String        @id
+  title     String
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+  messages  ChatMessage[]
+
+  @@index([updatedAt])
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id        String      @id @default(uuid()) @db.Uuid
+  sessionId String      @map("session_id")
+  messageId String      @map("message_id")
+  role      String
+  parts     Json
+  metadata  Json?
+  position  Int
+  createdAt DateTime    @default(now()) @map("created_at")
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, messageId])
+  @@unique([sessionId, position])
+  @@index([sessionId])
+  @@map("chat_messages")
+}
