@@ -10,6 +10,7 @@
     "dev:api": "pnpm --filter ./apps/api-server start:dev",
     "prisma:generate": "pnpm --filter ./apps/api-server prisma:generate",
     "prisma:migrate": "pnpm --filter ./apps/api-server prisma:migrate",
+    "prisma:migrate:deploy": "pnpm --filter ./apps/api-server prisma:migrate:deploy",
     "prisma:studio": "pnpm --filter ./apps/api-server prisma:studio"
   }
 }

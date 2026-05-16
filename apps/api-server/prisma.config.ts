@@ -3,12 +3,19 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
+const migrationDatabaseUrl =
+  process.env["DATABASE_URL_UNPOOLED"] ?? process.env["DATABASE_URL"];
+
+if (!migrationDatabaseUrl) {
+  throw new Error("DATABASE_URL or DATABASE_URL_UNPOOLED is required.");
+}
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: migrationDatabaseUrl,
   },
 });
