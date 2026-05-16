@@ -1,90 +1,187 @@
-# 🌍 Highwood Engineering Challenge: Emissions Data Platform
+# Highwood Emissions Platform
 
-## **The Context**
-Highwood Emissions Management is on a mission to provide industrial emissions transparency. Our platform processes vast streams of methane data from sensors, satellites, and field engineers. In our world, **data integrity is non-negotiable**. A lost packet or a double-counted emission can lead to inaccurate regulatory reporting (OGMP 2.0) and multi-million dollar implications for our clients.
+Full-stack emissions ingestion and monitoring platform for the Highwood take-home challenge.
 
-## **The Challenge**
-Your goal is to build the core of an **Emissions Ingestion & Analytics Engine**. This system must be resilient to unstable network conditions, handle high-concurrency updates, and be architected in a way that allows other engineers to build upon it easily.
+The implementation focuses on the hard part of the prompt: accepting methane readings from unreliable field clients without duplicating raw measurements or double-counting a site's emissions total.
 
----
+## What Is Built
 
-## **🛠 Technology Stack**
-We value the right tool for the job. While we have preferences, we are interested in how you wield your chosen stack.
-* **Backend:** Node.js preferred (NestJS is our standard), but other modern runtimes are acceptable.
-* **Frontend:** React preferred (Next.js App Router is our standard), but other frameworks like Vue or Svelte are also fine.
-* **Database:** **PostgreSQL is required**.
-* **Cache:** **Redis is optional** (provided in the docker-compose).
-* **Tools:** Any ORM (Drizzle/Prisma) and Validation libraries (Zod) are encouraged.
+- `POST /sites` creates monitored industrial sites with an `emission_limit` and flexible metadata.
+- `POST /ingest` accepts methane reading batches, persists raw measurements, updates site totals atomically, and supports duplicate-safe retries through idempotency keys.
+- `GET /sites/:id/metrics` returns compliance metrics for a site.
+- The dashboard lists sites, shows compliance metrics, supports manual ingestion, and demonstrates retry behavior without double-counting.
+- Successful and error API responses use a consistent platform envelope.
+- Backend architecture uses NestJS modules, service/repository boundaries, a Command/Processor workflow for ingestion, Prisma transactions, and a transactional outbox table.
 
----
+## Tech Stack
 
-## **🚀 Core Functional Requirements**
+- Frontend: Next.js App Router, React, TypeScript, shadcn/ui, TanStack Query, Zod
+- Backend: NestJS, TypeScript, Prisma, Zod
+- Database: PostgreSQL
+- Tooling: pnpm workspace, Docker Compose, Jest
+- Optional local infrastructure: Redis and pgAdmin are included in `docker-compose.yml`
 
-### **1. [POST] /sites — Asset Management**
-Create an industrial site (e.g., a well pad) that requires monitoring.
-* Each site must have an `emission_limit` and metadata.
-* **Platform Goal:** Implement a unified error-handling and response structure that could serve as a standard for a multi-team environment.
+## Repository Structure
 
-### **2. [POST] /ingest — Reliable Batch Ingestion**
-Accept a batch of methane readings (up to 100 entries) for a specific site.
-* **Atomic Transactions:** In a single transaction, the system must:
-    1. Persist the raw measurements.
-    2. Atomically update the site’s `total_emissions_to_date` summary.
-* **Network Resilience:** Field devices often operate in low-connectivity areas. If a client retries a request due to a timeout, the system **must not** create duplicate records or double-count the emissions in the summary.
+```text
+apps/
+  api-server/                 NestJS API, Prisma schema, migrations, tests
+    prisma/
+    src/modules/
+    src/shared/
 
-### **3. [GET] /sites/:id/metrics — Analytics**
-Retrieve a summary of a site’s performance, including its current compliance status (e.g., "Within Limit" vs. "Limit Exceeded").
+  web-app/                    Next.js dashboard
+    app/
+    components/
+    features/
+    lib/
 
-### **4. [Frontend] Monitoring Dashboard**
-Build a dashboard that allows an admin to:
-* View all sites and their real-time emission totals.
-* Use a "Manual Ingestion" form to simulate sensor data.
-* **UX Resilience:** Handle API errors gracefully. Implement a "Retry" mechanism that demonstrates how the frontend and backend collaborate to prevent data duplication.
+docker-compose.yml            local Postgres, Redis, optional pgAdmin
+package.json                  root pnpm workspace scripts
+```
 
----
+Architecture notes:
 
-## **🌟 Choose Your Strength (Bonus Tasks)**
-> 🚨 **Note for Senior/Lead Applicants:** Implementation of **at least 2 items** from this list is **mandatory**. For Intermediate roles, these are optional but highly encouraged.
+- Backend: [apps/api-server/BACKEND_ARCHITECTURE.md](apps/api-server/BACKEND_ARCHITECTURE.md)
+- Frontend: [apps/web-app/FRONTEND_ARCHITECTURE.md](apps/web-app/FRONTEND_ARCHITECTURE.md)
 
-1.  **Concurrency Control:** How does the system handle 10 concurrent sources updating the same `site_id`? Implement a protection strategy (e.g., Optimistic or Pessimistic locking).
-2.  **Architecture Pattern:** Demonstrate a scalable approach, such as **Command/Processor patterns (OOP)** or an **Event-Driven** model.
-3.  **Database Scalability:** Describe or implement a **Partitioning** strategy for the measurements table (e.g., by month/year) to handle 100M+ rows.
-4.  **Transactional Outbox:** Implement the **Outbox Pattern** to ensure that once a measurement is saved, a downstream "Alerting Service" is guaranteed to be notified.
-5.  **Developer Experience (DX):** Provide a seamless setup. Ensure the project can be started with a single command (e.g., `docker-compose`) including migrations and initial seed data.
-6.  **Observability:** Implement basic logging or metrics that track how many requests were identified and rejected as duplicates.
-7.  **Type-Safe Contract:** Share schemas (e.g., Zod) between the backend and frontend to ensure end-to-end type safety.
-8.  **API Versioning:** Implement a versioning strategy that ensures backward compatibility for older IoT sensors.
+## Prerequisites
 
----
+- Node.js 20+
+- pnpm 10.x
+- Docker Desktop or another Docker runtime
 
-## **🔧 Local Development & Infrastructure**
-We provide a basic `docker-compose.yml` to reduce setup friction. You are free to modify, replace, or remove components as you see fit.
+This repository is managed as a pnpm workspace. Use pnpm from the repository root; do not mix npm lockfiles into the apps.
 
-### **Quick Start**
-1.  Initialize environment: `cp .env.example .env`
-2.  Install dependencies: `pnpm install`
-3.  Start infrastructure: `docker compose up -d postgres redis`
-4.  Run migrations: `pnpm prisma:migrate`
-5.  Start the API: `pnpm dev:api`
-6.  Start the web app: `pnpm dev:web`
-7.  (Optional) DB Admin UI: `docker compose --profile tools up -d` (available at port 5050).
+## Quick Start
 
-This repository is managed as a pnpm workspace from the repo root. Use pnpm for both `apps/web-app` and `apps/api-server`; do not mix npm lockfiles into either app.
-
-### **Running Tests**
-Run commands from the repository root unless noted otherwise.
+Run these commands from the repository root.
 
 ```bash
-# Backend unit tests
-pnpm test
+# 1. Install dependencies
+pnpm install
 
-# Backend e2e tests
-# Requires Postgres to be running and migrations to be applied.
+# 2. Create environment files
+cp .env.example .env
+cp apps/api-server/.env.example apps/api-server/.env
+
+# 3. Start local infrastructure
+docker compose up -d postgres redis
+
+# 4. Apply database migrations
+pnpm prisma:migrate
+```
+
+Start the API in one terminal:
+
+```bash
+pnpm dev:api
+```
+
+Start the web app in a second terminal:
+
+```bash
+pnpm dev:web
+```
+
+Open the dashboard:
+
+```text
+http://localhost:3000/dashboard
+```
+
+By default, the API runs at `http://localhost:3001` and the web app reads from that URL. If you deploy or run the API elsewhere, set `NEXT_PUBLIC_API_BASE_URL` for the web app.
+
+Optional DB admin UI:
+
+```bash
+docker compose --profile tools up -d
+```
+
+pgAdmin is available at `http://localhost:5050` using the credentials in `.env`.
+
+## Demo Script
+
+Use this flow to demonstrate the key product and data-integrity behavior.
+
+1. Open `http://localhost:3000/dashboard`.
+2. Create a site with a name, emission limit, operator, and location.
+3. In **Manual Ingestion**, submit a methane reading batch for that site.
+4. Confirm the dashboard total, site metrics, and site performance table all increase by the submitted methane amount.
+5. Click **Retry Last Batch**.
+6. Confirm the UI reports the batch as a duplicate-safe retry.
+7. Confirm the site total does not increase on retry.
+8. Confirm the **Duplicate Retries** summary card increments for the session.
+
+The important behavior is that retry sends the exact retained batch payload and idempotency key. The backend returns `duplicate: true` for an identical retry and does not create duplicate measurements or increment `total_emissions_to_date` again.
+
+## API Endpoints
+
+### Create Site
+
+```http
+POST /sites
+```
+
+```json
+{
+  "name": "Bear Creek Pad 14",
+  "emission_limit": 12000,
+  "metadata": {
+    "operator": "North Ridge Energy",
+    "location": "Grande Prairie, AB"
+  }
+}
+```
+
+### Ingest Measurements
+
+```http
+POST /ingest
+```
+
+```json
+{
+  "site_id": "site-id",
+  "idempotency_key": "device-123-batch-001",
+  "readings": [
+    {
+      "source_id": "sensor-north-7",
+      "measured_at": "2026-05-16T06:30:00.000Z",
+      "methane_kg": 126,
+      "metadata": {
+        "submitted_by": "manual-dashboard"
+      }
+    }
+  ]
+}
+```
+
+### Site Metrics
+
+```http
+GET /sites/:id/metrics
+```
+
+## Testing
+
+Run unit tests:
+
+```bash
+pnpm test
+```
+
+Run backend e2e tests:
+
+```bash
 docker compose up -d postgres
 pnpm prisma:migrate
 pnpm --filter ./apps/api-server test:e2e
+```
 
-# Backend coverage report
+Run backend coverage:
+
+```bash
 pnpm --filter ./apps/api-server test:cov
 ```
 
@@ -97,19 +194,55 @@ pnpm lint
 pnpm build
 ```
 
----
+## Requirement Checklist
 
-## **📦 What We Are Looking For**
-* **Engineering Maturity:** How you handle "The Hard Parts"—concurrency, atomicity, and failures.
-* **Platform Thinking:** Is your code modular? Is it easy for another developer to understand your abstractions?
-* **Data Integrity:** Does your solution truly prevent double-counting under stress?
-* **Documentation:** Please include an `ARCHITECTURE.md` file explaining your key technical decisions and trade-offs.
+| Requirement | Status | Notes |
+| --- | --- | --- |
+| `POST /sites` asset management | Implemented | Stores `emission_limit`, metadata, and denormalized total. |
+| Unified API responses/errors | Implemented | Global response interceptor and exception filter. |
+| `POST /ingest` batch ingestion | Implemented | Accepts up to 100 readings through Zod validation. |
+| Atomic transaction | Implemented | Batch row, measurements, site total increment, and outbox event are written in one Prisma transaction. |
+| Retry/network resilience | Implemented | Unique `(site_id, idempotency_key)` plus request hash prevents duplicate records and double-counting. |
+| `GET /sites/:id/metrics` analytics | Implemented | Computes compliance status from current total and limit. |
+| Monitoring dashboard | Implemented | Site list, metrics panel, create-site form, manual ingestion form, retry UX. |
+| Command/Processor architecture | Implemented | Ingestion workflow is modeled as command plus processor. |
+| Transactional outbox | Implemented | Outbox event is written in the ingestion transaction. |
+| Concurrency protection | Implemented | Site totals use database-level atomic increment inside the transaction. |
+| Type-safe boundaries | Implemented | Backend and frontend validate API inputs/outputs with Zod schemas. |
+| Tests | Implemented | Backend unit tests and e2e test cover idempotency and metrics. |
 
----
+## Key Tradeoffs
 
-### **Submission**
-* Provide a link to a **public GitHub repository**.
-* **Deployment (Bonus):** We highly encourage providing a live URL (Vercel, Railway, AWS, etc.).
-* **Setup Guide:** Ensure your README has clear instructions on how to run the app, migrations, and tests locally.
+- `total_emissions_to_date` is denormalized on `sites` for fast dashboard and metrics reads, while `measurements` remain the auditable source records.
+- Compliance status is computed at read time instead of persisted, avoiding stale status when limits or totals change.
+- Idempotency is enforced in the database, not only in application memory, so retries remain safe across server restarts or multiple API instances.
+- The frontend tracks duplicate retries as session-level demo telemetry. Backend totals and persisted batch records remain the source of truth.
+- Redis is available locally but not required for the core correctness path; PostgreSQL constraints and transactions handle idempotency and atomicity.
 
-**Good luck! We are excited to see how you approach these challenges.**
+## Useful Commands
+
+```bash
+# Install dependencies
+pnpm install
+
+# Start API
+pnpm dev:api
+
+# Start web app
+pnpm dev:web
+
+# Generate Prisma client
+pnpm prisma:generate
+
+# Run migrations
+pnpm prisma:migrate
+
+# Open Prisma Studio
+pnpm prisma:studio
+
+# Lint all apps
+pnpm lint
+
+# Build all apps
+pnpm build
+```
