@@ -62,17 +62,38 @@ otherwise
 
 Persisting this status would create a second source of truth that could become stale if the emission limit changes. Computing it from the current limit and current total keeps the response deterministic and avoids unnecessary write complexity.
 
-## Data Integrity
+## Data Integrity And Concurrency
 
 `POST /ingest` performs the critical workflow in one database transaction:
 
-1. Verify the site exists.
+1. Verify the site exists and lock the site row.
 2. Create an `ingest_batches` row keyed by `(site_id, idempotency_key)`.
 3. Insert raw `measurements`.
 4. Atomically increment `sites.total_emissions_to_date`.
 5. Write an `outbox_events` row for downstream alerting.
 
-The site total is updated with a database-level increment, so concurrent ingestion requests do not overwrite each other.
+The system uses **pessimistic locking** for concurrent ingestion into the same site. The ingestion workflow takes a row-level lock on the target site:
+
+```sql
+SELECT id
+FROM sites
+WHERE id = $1
+FOR UPDATE
+```
+
+This lock is acquired inside the same Prisma transaction before the batch row, measurement rows, site summary update, and outbox event are written. If 10 field devices ingest readings for the same `site_id` at the same time, Postgres serializes those transactions on that one site row. Ingestion for different sites can still proceed independently because those requests lock different rows.
+
+Pessimistic locking is used here because ingestion is a short, write-heavy critical section that updates a shared aggregate summary. That makes blocking briefly at the database boundary simpler and safer than optimistic retries: the request either gets the site lock, writes the batch and summary consistently, or fails as a normal transaction error. This avoids exposing retry loops or version-conflict handling to field clients that may already be operating in unreliable network conditions.
+
+The site total is also updated with a database-level atomic increment:
+
+```ts
+totalEmissionsToDate: {
+  increment: amount,
+}
+```
+
+The row lock serializes competing writers, and the atomic increment protects the summary from lost updates. Together, they make the denormalized `sites.total_emissions_to_date` safe under concurrent ingestion while keeping the read path for `GET /sites/:id/metrics` fast.
 
 ## Idempotency
 

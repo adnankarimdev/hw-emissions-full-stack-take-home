@@ -246,6 +246,88 @@ describe('Emissions API (e2e)', () => {
     });
   });
 
+  it('serializes concurrent ingestion updates for the same site', async () => {
+    const siteResponse = await request(app.getHttpServer())
+      .post('/sites')
+      .send({
+        name: `Concurrent Pad ${Date.now()}`,
+        emission_limit: 1000,
+        metadata: {
+          location: 'Fort McMurray, AB',
+          operator: 'E2E Operator',
+        },
+      })
+      .expect(201);
+    const createdSite = siteResponse.body as ApiSuccessEnvelope<SiteResponse>;
+    const siteId = createdSite.data.id;
+    createdSiteIds.push(siteId);
+
+    const readings = Array.from({ length: 10 }, (_, index) => ({
+      methaneKg: index + 1,
+      sourceId: `concurrent-sensor-${index + 1}`,
+    }));
+    const expectedTotal = readings.reduce(
+      (total, reading) => total + reading.methaneKg,
+      0,
+    );
+
+    const responses = await Promise.all(
+      readings.map((reading, index) =>
+        request(app.getHttpServer())
+          .post('/ingest')
+          .send({
+            site_id: siteId,
+            idempotency_key: `concurrent-${Date.now()}-${index}`,
+            readings: [
+              {
+                source_id: reading.sourceId,
+                measured_at: new Date(Date.now() + index).toISOString(),
+                methane_kg: reading.methaneKg,
+              },
+            ],
+          })
+          .expect(201),
+      ),
+    );
+
+    for (const response of responses) {
+      const ingest = response.body as ApiSuccessEnvelope<IngestionResponse>;
+
+      expect(ingest.data).toMatchObject({
+        site_id: siteId,
+        readings_accepted: 1,
+        duplicate: false,
+        compliance_status: 'Within Limit',
+      });
+    }
+
+    const metricsResponse = await request(app.getHttpServer())
+      .get(`/sites/${siteId}/metrics`)
+      .expect(200);
+    const metrics =
+      metricsResponse.body as ApiSuccessEnvelope<SiteMetricsResponse>;
+
+    expect(metrics.data).toMatchObject({
+      site_id: siteId,
+      total_emissions_to_date: expectedTotal,
+      compliance_status: 'Within Limit',
+    });
+    await expect(
+      prisma.measurement.count({
+        where: {
+          siteId,
+        },
+      }),
+    ).resolves.toBe(10);
+    await expect(
+      prisma.ingestBatch.count({
+        where: {
+          siteId,
+        },
+      }),
+    ).resolves.toBe(10);
+  });
+
   it('persists operations chat sessions and messages through the backend API', async () => {
     const createResponse = await request(app.getHttpServer())
       .post('/chat/sessions')

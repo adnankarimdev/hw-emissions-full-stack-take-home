@@ -14,6 +14,7 @@ describe('IngestMeasurementsProcessor', () => {
   let sitesRepository: {
     findById: jest.Mock;
     incrementTotalEmissions: jest.Mock;
+    lockByIdForUpdate: jest.Mock;
   };
   let measurementsRepository: {
     createBatch: jest.Mock;
@@ -34,6 +35,7 @@ describe('IngestMeasurementsProcessor', () => {
     sitesRepository = {
       findById: jest.fn(),
       incrementTotalEmissions: jest.fn(),
+      lockByIdForUpdate: jest.fn(),
     };
     measurementsRepository = {
       createBatch: jest.fn(),
@@ -55,7 +57,7 @@ describe('IngestMeasurementsProcessor', () => {
   it('persists measurements, increments the site total, and writes an outbox event in one transaction', async () => {
     const command = createCommand();
 
-    sitesRepository.findById.mockResolvedValueOnce(createSite({ total: 0 }));
+    sitesRepository.lockByIdForUpdate.mockResolvedValueOnce(true);
     measurementsRepository.createBatch.mockResolvedValueOnce({
       id: 'batch-1',
     });
@@ -72,7 +74,10 @@ describe('IngestMeasurementsProcessor', () => {
     const result = await processor.execute(command);
 
     expect(transactionManager.run).toHaveBeenCalledTimes(1);
-    expect(sitesRepository.findById).toHaveBeenCalledWith('site-1', tx);
+    expect(sitesRepository.lockByIdForUpdate).toHaveBeenCalledWith(
+      'site-1',
+      tx,
+    );
     const [createBatchData, createBatchTx] = measurementsRepository.createBatch
       .mock.calls[0] as [
       {
@@ -184,7 +189,7 @@ describe('IngestMeasurementsProcessor', () => {
   it('rejects missing sites before writing any ingestion records', async () => {
     const command = createCommand();
 
-    sitesRepository.findById.mockResolvedValueOnce(null);
+    sitesRepository.lockByIdForUpdate.mockResolvedValueOnce(false);
 
     await expect(processor.execute(command)).rejects.toMatchObject({
       code: ApplicationErrorCode.SiteNotFound,

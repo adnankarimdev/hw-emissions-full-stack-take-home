@@ -20,9 +20,12 @@ export class IngestMeasurementsProcessor {
   async execute(command: IngestMeasurementsCommand) {
     try {
       return await this.transactionManager.run(async (tx) => {
-        const site = await this.sitesRepository.findById(command.siteId, tx);
+        const siteExists = await this.sitesRepository.lockByIdForUpdate(
+          command.siteId,
+          tx,
+        );
 
-        if (!site) {
+        if (!siteExists) {
           throw ApplicationError.notFound(
             `Site ${command.siteId} was not found.`,
           );

@@ -29,6 +29,17 @@ export class SitesRepository {
     });
   }
 
+  async lockByIdForUpdate(id: string, client: DatabaseClient = this.prisma) {
+    const rows = await client.$queryRaw<Array<{ id: string }>>`
+      SELECT id
+      FROM sites
+      WHERE id = CAST(${id} AS uuid)
+      FOR UPDATE
+    `;
+
+    return rows.length > 0;
+  }
+
   list(client: DatabaseClient = this.prisma) {
     return client.site.findMany({
       include: {
