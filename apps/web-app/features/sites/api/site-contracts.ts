@@ -15,6 +15,16 @@ export const backendSiteSchema = z.object({
   compliance_status: complianceStatusSchema,
 })
 
+export const backendCreatedSiteSchema = backendSiteSchema
+  .omit({
+    compliance_status: true,
+    latest_reading_at: true,
+  })
+  .extend({
+    created_at: z.string(),
+    updated_at: z.string(),
+  })
+
 export const backendSiteListSchema = z.array(backendSiteSchema)
 
 export const backendSiteMetricsSchema = z.object({
@@ -25,6 +35,7 @@ export const backendSiteMetricsSchema = z.object({
 })
 
 type BackendSite = z.infer<typeof backendSiteSchema>
+type BackendCreatedSite = z.infer<typeof backendCreatedSiteSchema>
 type BackendSiteMetrics = z.infer<typeof backendSiteMetricsSchema>
 
 export function toSiteSummary(site: BackendSite): SiteSummary {
@@ -39,6 +50,17 @@ export function toSiteSummary(site: BackendSite): SiteSummary {
     status: site.compliance_status,
     ingestionHealth: "online",
   }
+}
+
+export function toCreatedSiteSummary(site: BackendCreatedSite): SiteSummary {
+  return toSiteSummary({
+    ...site,
+    latest_reading_at: null,
+    compliance_status:
+      site.total_emissions_to_date > site.emission_limit
+        ? "Limit Exceeded"
+        : "Within Limit",
+  })
 }
 
 export function toSiteMetrics(metrics: BackendSiteMetrics): SiteMetrics {

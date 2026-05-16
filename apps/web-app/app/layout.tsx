@@ -41,7 +41,7 @@ export default function RootLayout({
         inter.variable
       )}
     >
-      <body className="flex min-h-full flex-col">
+      <body suppressHydrationWarning className="flex min-h-full flex-col">
         <AppProviders>{children}</AppProviders>
         <Toaster />
       </body>

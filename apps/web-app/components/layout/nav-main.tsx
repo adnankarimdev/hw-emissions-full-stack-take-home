@@ -31,19 +31,25 @@ export function NavMain({ items }: NavMainProps) {
         <SidebarMenu>
           <SidebarMenuItem className="flex items-center gap-2">
             <SidebarMenuButton
+              asChild
               tooltip="Create site"
               className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
             >
-              <PlusIcon />
-              <span>Create Site</span>
+              <Link href="/dashboard#create-site">
+                <PlusIcon />
+                <span>Create Site</span>
+              </Link>
             </SidebarMenuButton>
             <Button
+              asChild
               size="icon"
               className="size-8 group-data-[collapsible=icon]:opacity-0"
               variant="outline"
             >
-              <PlusIcon />
-              <span className="sr-only">Create ingestion batch</span>
+              <Link href="/dashboard#ingestion">
+                <PlusIcon />
+                <span className="sr-only">Create ingestion batch</span>
+              </Link>
             </Button>
           </SidebarMenuItem>
         </SidebarMenu>

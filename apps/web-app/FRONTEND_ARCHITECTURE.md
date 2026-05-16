@@ -36,7 +36,7 @@ Client component
 
 The shared API client unwraps the backend response envelope and validates response data with Zod schemas at the frontend boundary. Components receive normalized camelCase view models instead of raw transport payloads.
 
-Query keys live under `lib/api/query-keys.ts` so invalidation remains consistent as create-site and ingestion mutations are added.
+Query keys live under `lib/api/query-keys.ts` so invalidation remains consistent. Create-site mutations invalidate the sites query after success instead of manually patching unrelated component state.
 
 Guidelines:
 

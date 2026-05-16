@@ -20,6 +20,22 @@ export class ApiContractError extends Error {
   }
 }
 
+export function getApiErrorMessage(error: unknown) {
+  if (error instanceof ApiRequestError) {
+    return error.message
+  }
+
+  if (error instanceof ApiContractError) {
+    return error.message
+  }
+
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  return "Something went wrong."
+}
+
 type RequestJsonOptions = RequestInit & {
   baseUrl?: string
 }

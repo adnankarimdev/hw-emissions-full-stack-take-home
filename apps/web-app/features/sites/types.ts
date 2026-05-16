@@ -14,6 +14,13 @@ export type SiteSummary = {
   ingestionHealth: IngestionHealth
 }
 
+export type CreateSiteInput = {
+  name: string
+  emissionLimitKg: number
+  operator: string
+  location: string
+}
+
 export type SiteMetrics = {
   siteId: string
   totalEmissionsKg: number
