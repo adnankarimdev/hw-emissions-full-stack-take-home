@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useChat } from "@ai-sdk/react"
 import {
   DefaultChatTransport,
@@ -46,6 +46,7 @@ import {
   ToolOutput,
 } from "@/components/ai-elements/tool"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import type { ChatRenderSpec } from "@/features/chat/renderer/spec"
 import { ChatRenderedUi } from "@/features/chat/renderer/catalog"
 import type { ChatSessionSummary } from "@/features/chat/server/chat-store"
@@ -90,6 +91,12 @@ export function ChatWorkspace({
     transport,
   })
   const isBusy = status === "submitted" || status === "streaming"
+  const elapsedSeconds = useElapsedSeconds(isBusy)
+  const assistantProgress = getAssistantProgress({
+    elapsedSeconds,
+    messages,
+    status,
+  })
 
   function handleSubmit(message: PromptInputMessage) {
     const text = message.text.trim()
@@ -129,6 +136,9 @@ export function ChatWorkspace({
                 />
               ))
             )}
+            {assistantProgress ? (
+              <AssistantProgressMessage progress={assistantProgress} />
+            ) : null}
           </ConversationContent>
           {messages.length > 0 ? (
             <ConversationDownload
@@ -182,6 +192,12 @@ export function ChatWorkspace({
       </section>
     </div>
   )
+}
+
+type AssistantProgress = {
+  detail: string
+  elapsedSeconds: number
+  title: string
 }
 
 type ChatHistoryProps = {
@@ -284,6 +300,34 @@ function ChatMessagePart({ part }: { part: UIMessage["parts"][number] }) {
   return null
 }
 
+function AssistantProgressMessage({
+  progress,
+}: {
+  progress: AssistantProgress
+}) {
+  return (
+    <Message from="assistant">
+      <MessageContent className="w-full max-w-none">
+        <div
+          aria-live="polite"
+          className="flex items-center gap-3 rounded-md border bg-muted/40 px-3 py-2 text-sm"
+        >
+          <Spinner className="text-muted-foreground" />
+          <div className="min-w-0">
+            <p className="font-medium">{progress.title}</p>
+            <p className="text-xs text-muted-foreground">
+              {progress.detail}
+              {progress.elapsedSeconds > 0
+                ? ` ${progress.elapsedSeconds}s`
+                : ""}
+            </p>
+          </div>
+        </div>
+      </MessageContent>
+    </Message>
+  )
+}
+
 function ChatToolPart({ part }: { part: ToolUIPart }) {
   const renderOutput =
     part.state === "output-available" &&
@@ -376,4 +420,71 @@ function formatSessionUpdatedAt(updatedAt: string) {
     minute: "2-digit",
     month: "short",
   })
+}
+
+function getAssistantProgress({
+  elapsedSeconds,
+  messages,
+  status,
+}: {
+  elapsedSeconds: number
+  messages: UIMessage[]
+  status: "submitted" | "streaming" | "ready" | "error"
+}): AssistantProgress | null {
+  if (status !== "submitted" && status !== "streaming") {
+    return null
+  }
+
+  const latestMessage = messages.at(-1)
+
+  if (
+    latestMessage?.role === "assistant" &&
+    hasVisibleAssistantActivity(latestMessage)
+  ) {
+    return null
+  }
+
+  if (status === "submitted") {
+    return {
+      detail: "Sending the request to the operations copilot.",
+      elapsedSeconds,
+      title: "Thinking",
+    }
+  }
+
+  return {
+    detail: "Preparing the response or selecting the right dashboard tool.",
+    elapsedSeconds,
+    title: "Working",
+  }
+}
+
+function hasVisibleAssistantActivity(message: UIMessage) {
+  return message.parts.some((part) => {
+    if (part.type === "text") {
+      return part.text.trim().length > 0
+    }
+
+    return part.type.startsWith("tool-")
+  })
+}
+
+function useElapsedSeconds(isActive: boolean) {
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+
+  useEffect(() => {
+    if (!isActive) {
+      return
+    }
+
+    const startedAt = Date.now()
+
+    const intervalId = window.setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000))
+    }, 1000)
+
+    return () => window.clearInterval(intervalId)
+  }, [isActive])
+
+  return isActive ? elapsedSeconds : 0
 }

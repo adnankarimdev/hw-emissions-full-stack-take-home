@@ -61,7 +61,7 @@ export async function POST(request: Request) {
   }
 
   const result = streamText({
-    model: gateway(process.env.AI_GATEWAY_MODEL ?? "xai/grok-4.1-fast-reasoning"),
+    model: gateway(process.env.AI_GATEWAY_MODEL ?? "openai/gpt-5-nano"),
     system: buildOperationsChatSystemPrompt(),
     messages: await convertToModelMessages(validatedMessages),
     tools: operationsChatTools,
