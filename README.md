@@ -102,7 +102,11 @@ AI_GATEWAY_API_KEY=your_gateway_key
 AI_GATEWAY_MODEL=openai/gpt-5.5
 ```
 
-Local chat conversations are written to `.data/chats` under the web app so they survive app restarts. For production Vercel deployments, use a durable database-backed chat store instead of the local filesystem adapter.
+Operations chat conversations are persisted through the NestJS backend into Postgres. Run migrations before using chat locally so the `chat_sessions` and `chat_messages` tables exist:
+
+```bash
+pnpm prisma:migrate
+```
 
 Optional DB admin UI:
 
@@ -233,7 +237,7 @@ pnpm build
 | `GET /sites/:id/metrics` analytics | Implemented | Computes compliance status from current total and limit. |
 | `GET /sites/:id/emissions-trend` analytics | Implemented | Builds a per-site UTC daily trend from persisted measurements. |
 | Monitoring dashboard | Implemented | Real per-site trend graph, site list, metrics panel, create-site form, manual ingestion form, retry UX. |
-| Operations chat | Implemented | AI SDK route, persisted sessions, constrained renderer catalog, dashboard read tools, create-site and ingestion tools. |
+| Operations chat | Implemented | AI SDK route, Postgres-backed sessions, constrained renderer catalog, dashboard read tools, create-site and ingestion tools. |
 | Command/Processor architecture | Implemented | Ingestion workflow is modeled as command plus processor. |
 | Transactional outbox | Implemented | Outbox event is written in the ingestion transaction. |
 | Concurrency protection | Implemented | Site totals use database-level atomic increment inside the transaction. |

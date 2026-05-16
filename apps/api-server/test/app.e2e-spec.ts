@@ -56,10 +56,24 @@ type SiteEmissionsTrendResponse = {
   }>;
 };
 
+type ChatSessionResponse = {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  message_count: number;
+  messages: Array<{
+    id: string;
+    role: string;
+    parts: Array<Record<string, unknown>>;
+  }>;
+};
+
 describe('Emissions API (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaService;
   const createdSiteIds: string[] = [];
+  const createdChatSessionIds: string[] = [];
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -91,6 +105,17 @@ describe('Emissions API (e2e)', () => {
         },
       });
       createdSiteIds.length = 0;
+    }
+
+    if (createdChatSessionIds.length > 0) {
+      await prisma.chatSession.deleteMany({
+        where: {
+          id: {
+            in: createdChatSessionIds,
+          },
+        },
+      });
+      createdChatSessionIds.length = 0;
     }
 
     await app.close();
@@ -214,5 +239,93 @@ describe('Emissions API (e2e)', () => {
       emission_limit: 1000,
       compliance_status: 'Within Limit',
     });
+  });
+
+  it('persists operations chat sessions and messages through the backend API', async () => {
+    const createResponse = await request(app.getHttpServer())
+      .post('/chat/sessions')
+      .send()
+      .expect(201);
+    const createdChat =
+      createResponse.body as ApiSuccessEnvelope<ChatSessionResponse>;
+    createdChatSessionIds.push(createdChat.data.id);
+
+    expect(createdChat.data).toMatchObject({
+      title: 'New operations chat',
+      message_count: 0,
+      messages: [],
+    });
+    expect(createdChat.data.id).toMatch(/^chat_[a-f0-9]{32}$/);
+
+    const messages = [
+      {
+        id: 'user-message-1',
+        role: 'user',
+        parts: [
+          {
+            type: 'text',
+            text: 'Show me Calgary site metrics.',
+          },
+        ],
+      },
+      {
+        id: 'assistant-message-1',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'text',
+            text: 'I can render the metrics view.',
+          },
+        ],
+      },
+    ];
+
+    const saveResponse = await request(app.getHttpServer())
+      .put(`/chat/sessions/${createdChat.data.id}/messages`)
+      .send({
+        messages,
+      })
+      .expect(200);
+    const savedChat =
+      saveResponse.body as ApiSuccessEnvelope<ChatSessionResponse>;
+
+    expect(savedChat.data).toMatchObject({
+      id: createdChat.data.id,
+      title: 'Show me Calgary site metrics.',
+      message_count: 2,
+      messages,
+    });
+
+    const fetchedResponse = await request(app.getHttpServer())
+      .get(`/chat/sessions/${createdChat.data.id}`)
+      .expect(200);
+    const fetchedChat =
+      fetchedResponse.body as ApiSuccessEnvelope<ChatSessionResponse>;
+
+    expect(fetchedChat.data.messages).toEqual(messages);
+
+    const latestResponse = await request(app.getHttpServer())
+      .get('/chat/sessions/latest')
+      .expect(200);
+    const latestChat =
+      latestResponse.body as ApiSuccessEnvelope<ChatSessionResponse | null>;
+
+    expect(latestChat.data?.id).toBe(createdChat.data.id);
+
+    const listResponse = await request(app.getHttpServer())
+      .get('/chat/sessions')
+      .expect(200);
+    const chatList = listResponse.body as ApiSuccessEnvelope<
+      Array<Omit<ChatSessionResponse, 'messages'>>
+    >;
+
+    expect(chatList.data).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: createdChat.data.id,
+          message_count: 2,
+        }),
+      ]),
+    );
   });
 });

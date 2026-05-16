@@ -68,7 +68,7 @@ app/chat/[chatId]/page.tsx
   -> NestJS API
 ```
 
-The chat route uses the Vercel AI SDK with AI Gateway. The model id defaults to `openai/gpt-5.5` and can be overridden with `AI_GATEWAY_MODEL`; authentication is handled by `AI_GATEWAY_API_KEY` in the web app environment.
+The chat route uses the Vercel AI SDK with AI Gateway. The model id defaults to `openai/gpt-5-nano` and can be overridden with `AI_GATEWAY_MODEL`; authentication is handled by `AI_GATEWAY_API_KEY` in the web app environment.
 
 The assistant is not allowed to render arbitrary React. It can call a `renderDashboardUi` tool with a constrained `@json-render/react` spec, and that spec can only reference the local renderer catalog:
 
@@ -85,7 +85,7 @@ Those renderer entries are adapters over existing dashboard, site, and ingestion
 
 AI tools follow the same rule: data reads and writes go through the existing feature API clients. `createSite` and `ingestMeasurements` are exposed as explicit mutation tools, and the system prompt requires missing fields and user intent to be resolved before either tool is called. The ingestion tool preserves the platform idempotency contract by requiring an idempotency key and a bounded batch of 1 to 100 readings.
 
-Chat sessions are persisted through `features/chat/server/chat-store.ts`. The current adapter writes JSON under `.data/chats` so local conversations survive app restarts and browser sessions during the take-home review. That directory is git-ignored. For a production Vercel deployment, this adapter should be replaced with a durable store such as the existing Postgres backend because serverless filesystem writes are not a persistence boundary.
+Chat sessions are persisted through `features/chat/server/chat-store.ts`, but that file is a server-side backend API adapter rather than a filesystem store. Session creation, listing, lookup, and message replacement go through the NestJS `chat` module and are stored in Postgres as `chat_sessions` and `chat_messages`. The Next.js app keeps ownership of AI streaming, while durable conversation state lives behind the same response envelope and deployment boundary as the rest of the platform API.
 
 Guidelines:
 

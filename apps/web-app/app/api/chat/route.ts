@@ -60,6 +60,11 @@ export async function POST(request: Request) {
     )
   }
 
+  await saveChatMessages({
+    chatId,
+    messages: validatedMessages,
+  })
+
   const result = streamText({
     model: gateway(process.env.AI_GATEWAY_MODEL ?? "openai/gpt-5-nano"),
     system: buildOperationsChatSystemPrompt(),

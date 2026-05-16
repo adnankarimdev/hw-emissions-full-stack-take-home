@@ -13,6 +13,7 @@ src/
       processors/             transaction orchestration and business workflow
       repositories/           measurement and ingest batch persistence
     outbox/                   transactional outbox persistence and worker seam
+    chat/                     durable operations chat sessions and messages
 
   shared/
     database/                 Prisma client and database module
@@ -44,6 +45,7 @@ The data model is derived from the required workflows and consistency guarantees
 - `Measurement` stores the raw methane readings as append-only audit records. Measurements are kept separate from `Site` because they represent source facts, while the site total is a read-optimized summary derived from those facts.
 - `IngestBatch` models a single client ingestion attempt and is the boundary for retry safety. It stores the `idempotency_key`, canonical `request_hash`, reading count, and total emissions contributed by the batch.
 - `OutboxEvent` records domain events in the same transaction as the ingestion write. This supports reliable downstream processing for alerting, analytics, notifications, or future integrations without coupling those concerns to the request path.
+- `ChatSession` and `ChatMessage` persist the operations copilot conversation history in Postgres instead of relying on the Next.js server filesystem. The session is the conversation aggregate, while messages are ordered child records that store the AI SDK UI message id, role, parts JSON, and optional metadata. This preserves the full rendered/tool-call conversation state across browser restarts, server restarts, and Vercel deployments.
 
 The most important modeling choice is that `sites.total_emissions_to_date` is stored as a denormalized summary while `measurements` remain the source of truth. This gives `GET /sites/:id/metrics` a fast read path without sacrificing auditability or the ability to recalculate totals if business rules change later.
 
@@ -126,5 +128,7 @@ Key tables:
 - `ingest_batches`
 - `measurements`
 - `outbox_events`
+- `chat_sessions`
+- `chat_messages`
 
-The initial migration is checked in at `prisma/migrations/20260515000000_init/migration.sql`.
+The initial migration is checked in at `prisma/migrations/20260515000000_init/migration.sql`; chat persistence is added in `prisma/migrations/20260516000000_add_chat_sessions/migration.sql`.
