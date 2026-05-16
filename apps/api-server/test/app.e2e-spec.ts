@@ -69,6 +69,11 @@ type ChatSessionResponse = {
   }>;
 };
 
+type DeletedChatSessionResponse = {
+  deleted: boolean;
+  id: string;
+};
+
 describe('Emissions API (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaService;
@@ -327,5 +332,20 @@ describe('Emissions API (e2e)', () => {
         }),
       ]),
     );
+
+    const deleteResponse = await request(app.getHttpServer())
+      .delete(`/chat/sessions/${createdChat.data.id}`)
+      .expect(200);
+    const deletedChat =
+      deleteResponse.body as ApiSuccessEnvelope<DeletedChatSessionResponse>;
+
+    expect(deletedChat.data).toEqual({
+      id: createdChat.data.id,
+      deleted: true,
+    });
+
+    await request(app.getHttpServer())
+      .get(`/chat/sessions/${createdChat.data.id}`)
+      .expect(404);
   });
 });

@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import { useChat } from "@ai-sdk/react"
 import {
@@ -13,6 +14,7 @@ import {
   MessageSquareIcon,
   PlusIcon,
   RefreshCcwIcon,
+  Trash2Icon,
 } from "lucide-react"
 
 import {
@@ -36,7 +38,6 @@ import {
   type PromptInputMessage,
   PromptInputSubmit,
   PromptInputTextarea,
-  PromptInputTools,
 } from "@/components/ai-elements/prompt-input"
 import {
   Tool,
@@ -46,10 +47,22 @@ import {
   ToolOutput,
 } from "@/components/ai-elements/tool"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { deleteChatSession } from "@/features/chat/api/chat-api"
 import { Spinner } from "@/components/ui/spinner"
 import type { ChatRenderSpec } from "@/features/chat/renderer/spec"
 import { ChatRenderedUi } from "@/features/chat/renderer/catalog"
 import type { ChatSessionSummary } from "@/features/chat/types"
+import { getApiErrorMessage } from "@/lib/api/client"
 import { cn } from "@/lib/utils"
 
 type ChatWorkspaceProps = {
@@ -64,6 +77,9 @@ export function ChatWorkspace({
   sessions,
 }: ChatWorkspaceProps) {
   const [input, setInput] = useState("")
+  const [deletedChatIds, setDeletedChatIds] = useState<Set<string>>(
+    () => new Set()
+  )
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
@@ -97,6 +113,10 @@ export function ChatWorkspace({
     messages,
     status,
   })
+  const chatSessions = useMemo(
+    () => sessions.filter((session) => !deletedChatIds.has(session.id)),
+    [deletedChatIds, sessions]
+  )
 
   function handleSubmit(message: PromptInputMessage) {
     const text = message.text.trim()
@@ -113,7 +133,14 @@ export function ChatWorkspace({
     <div className="@container/main flex min-h-[calc(100vh-var(--header-height))] flex-1 gap-4 p-4 md:p-6">
       <ChatHistory
         activeChatId={chatId}
-        sessions={sessions}
+        onSessionDeleted={(deletedChatId) => {
+          setDeletedChatIds((currentDeletedChatIds) => {
+            const nextDeletedChatIds = new Set(currentDeletedChatIds)
+            nextDeletedChatIds.add(deletedChatId)
+            return nextDeletedChatIds
+          })
+        }}
+        sessions={chatSessions}
       />
       <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border bg-background">
         <Conversation className="min-h-0">
@@ -172,15 +199,7 @@ export function ChatWorkspace({
                 placeholder="Ask about site metrics, trends, or operations..."
               />
             </PromptInputBody>
-            <PromptInputFooter>
-              <PromptInputTools>
-                <Button asChild size="sm" variant="ghost">
-                  <Link href="/chat?new=1">
-                    <PlusIcon />
-                    New Chat
-                  </Link>
-                </Button>
-              </PromptInputTools>
+            <PromptInputFooter className="justify-end">
               <PromptInputSubmit
                 disabled={!input.trim() && !isBusy}
                 onStop={stop}
@@ -202,10 +221,28 @@ type AssistantProgress = {
 
 type ChatHistoryProps = {
   activeChatId: string
+  onSessionDeleted: (chatId: string) => void
   sessions: ChatSessionSummary[]
 }
 
-function ChatHistory({ activeChatId, sessions }: ChatHistoryProps) {
+function ChatHistory({
+  activeChatId,
+  onSessionDeleted,
+  sessions,
+}: ChatHistoryProps) {
+  const router = useRouter()
+
+  function handleSessionDeleted(deletedChatId: string) {
+    onSessionDeleted(deletedChatId)
+
+    if (deletedChatId === activeChatId) {
+      router.replace("/chat")
+      return
+    }
+
+    router.refresh()
+  }
+
   return (
     <aside className="hidden w-72 shrink-0 flex-col rounded-lg border bg-card p-3 lg:flex">
       <div className="mb-3 flex items-center justify-between gap-2">
@@ -219,16 +256,17 @@ function ChatHistory({ activeChatId, sessions }: ChatHistoryProps) {
       </div>
       <div className="grid gap-1 overflow-y-auto">
         {sessions.map((session) => (
-          <Button
-            asChild
+          <div
             className={cn(
-              "h-auto justify-start px-2 py-2 text-left",
+              "group grid grid-cols-[minmax(0,1fr)_auto] items-center rounded-md",
               activeChatId === session.id && "bg-muted"
             )}
             key={session.id}
-            variant="ghost"
           >
-            <Link href={`/chat/${session.id}`}>
+            <Link
+              className="grid min-w-0 gap-0.5 rounded-md px-2 py-2 text-left outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
+              href={`/chat/${session.id}`}
+            >
               <span className="grid min-w-0 gap-0.5">
                 <span className="truncate text-sm">{session.title}</span>
                 <span className="text-xs font-normal text-muted-foreground">
@@ -236,10 +274,101 @@ function ChatHistory({ activeChatId, sessions }: ChatHistoryProps) {
                 </span>
               </span>
             </Link>
-          </Button>
+            <DeleteChatSessionDialog
+              onDeleted={handleSessionDeleted}
+              session={session}
+            />
+          </div>
         ))}
       </div>
     </aside>
+  )
+}
+
+type DeleteChatSessionDialogProps = {
+  onDeleted: (chatId: string) => void
+  session: ChatSessionSummary
+}
+
+function DeleteChatSessionDialog({
+  onDeleted,
+  session,
+}: DeleteChatSessionDialogProps) {
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [open, setOpen] = useState(false)
+
+  async function handleDelete() {
+    setIsDeleting(true)
+    setDeleteError(null)
+
+    try {
+      await deleteChatSession(session.id)
+      setOpen(false)
+      onDeleted(session.id)
+    } catch (error) {
+      setDeleteError(getApiErrorMessage(error))
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (isDeleting) {
+          return
+        }
+
+        setOpen(nextOpen)
+
+        if (!nextOpen) {
+          setDeleteError(null)
+        }
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button
+          aria-label={`Delete ${session.title}`}
+          className="mr-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+          size="icon-xs"
+          type="button"
+          variant="ghost"
+        >
+          <Trash2Icon className="size-3.5 text-muted-foreground" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete Conversation</DialogTitle>
+          <DialogDescription>
+            This will permanently delete &quot;{session.title}&quot; and its
+            saved messages from the database.
+          </DialogDescription>
+        </DialogHeader>
+        {deleteError ? (
+          <p className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            {deleteError}
+          </p>
+        ) : null}
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button disabled={isDeleting} type="button" variant="outline">
+              Cancel
+            </Button>
+          </DialogClose>
+          <Button
+            disabled={isDeleting}
+            onClick={() => void handleDelete()}
+            type="button"
+            variant="destructive"
+          >
+            {isDeleting ? "Deleting..." : "Delete"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 

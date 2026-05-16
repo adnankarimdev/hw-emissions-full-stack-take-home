@@ -82,6 +82,16 @@ export class ChatRepository {
     });
   }
 
+  async deleteSession(id: string, client: DatabaseClient = this.prisma) {
+    const result = await client.chatSession.deleteMany({
+      where: {
+        id,
+      },
+    });
+
+    return result.count;
+  }
+
   replaceMessages(data: ReplaceChatMessagesData) {
     return this.prisma.$transaction(async (transaction) => {
       const existingSession = await transaction.chatSession.findUnique({

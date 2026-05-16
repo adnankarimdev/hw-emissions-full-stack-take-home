@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+} from '@nestjs/common';
 import { ZodValidationPipe } from '../../shared/validation/zod-validation.pipe';
 import { ChatService } from './chat.service';
 import type { SaveChatMessagesRequest } from './dto/save-chat-messages.dto';
@@ -26,6 +34,11 @@ export class ChatController {
   @Get(':id')
   getSession(@Param('id') chatSessionId: string) {
     return this.chatService.getSession(chatSessionId);
+  }
+
+  @Delete(':id')
+  deleteSession(@Param('id') chatSessionId: string) {
+    return this.chatService.deleteSession(chatSessionId);
   }
 
   @Put(':id/messages')

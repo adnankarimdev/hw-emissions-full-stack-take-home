@@ -50,6 +50,21 @@ export class ChatService {
     return sessions.map(presentChatSessionSummary);
   }
 
+  async deleteSession(chatSessionId: string) {
+    assertValidChatSessionId(chatSessionId);
+
+    const deletedCount = await this.chatRepository.deleteSession(chatSessionId);
+
+    if (deletedCount === 0) {
+      throw ApplicationError.chatSessionNotFound(chatSessionId);
+    }
+
+    return {
+      id: chatSessionId,
+      deleted: true,
+    };
+  }
+
   async replaceMessages(
     chatSessionId: string,
     request: SaveChatMessagesRequest,

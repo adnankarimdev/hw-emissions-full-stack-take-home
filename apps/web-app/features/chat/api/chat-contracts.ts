@@ -40,6 +40,11 @@ export const backendChatSessionListSchema = z.array(
 export const backendNullableChatSessionSchema =
   backendChatSessionSchema.nullable()
 
+export const backendDeletedChatSessionSchema = z.object({
+  id: z.string(),
+  deleted: z.literal(true),
+})
+
 type BackendChatSession = z.infer<typeof backendChatSessionSchema>
 type BackendChatSessionSummary = z.infer<
   typeof backendChatSessionSummarySchema
