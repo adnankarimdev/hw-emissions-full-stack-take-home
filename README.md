@@ -62,8 +62,14 @@ We provide a basic `docker-compose.yml` to reduce setup friction. You are free t
 
 ### **Quick Start**
 1.  Initialize environment: `cp .env.example .env`
-2.  Start infrastructure: `docker compose up -d`
-3.  (Optional) DB Admin UI: `docker compose --profile tools up -d` (available at port 5050).
+2.  Install dependencies: `pnpm install`
+3.  Start infrastructure: `docker compose up -d postgres redis`
+4.  Run migrations: `pnpm prisma:migrate`
+5.  Start the API: `pnpm dev:api`
+6.  Start the web app: `pnpm dev:web`
+7.  (Optional) DB Admin UI: `docker compose --profile tools up -d` (available at port 5050).
+
+This repository is managed as a pnpm workspace from the repo root. Use pnpm for both `apps/web-app` and `apps/api-server`; do not mix npm lockfiles into either app.
 
 ---
 

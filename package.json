@@ -1,0 +1,15 @@
+{
+  "name": "emissions-platform-workspace",
+  "private": true,
+  "packageManager": "pnpm@10.15.0",
+  "scripts": {
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm --filter ./apps/api-server test",
+    "dev:web": "pnpm --filter ./apps/web-app dev",
+    "dev:api": "pnpm --filter ./apps/api-server start:dev",
+    "prisma:generate": "pnpm --filter ./apps/api-server prisma:generate",
+    "prisma:migrate": "pnpm --filter ./apps/api-server prisma:migrate",
+    "prisma:studio": "pnpm --filter ./apps/api-server prisma:studio"
+  }
+}
