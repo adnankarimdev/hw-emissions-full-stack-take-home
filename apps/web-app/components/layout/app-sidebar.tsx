@@ -2,19 +2,14 @@
 
 import type { ComponentProps } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import {
   ActivityIcon,
-  BellIcon,
-  Building2Icon,
-  CircleHelpIcon,
   GaugeIcon,
-  HistoryIcon,
-  RadioTowerIcon,
-  Settings2Icon,
+  MessageSquareIcon,
 } from "lucide-react"
 
 import { NavMain } from "@/components/layout/nav-main"
-import { NavSecondary } from "@/components/layout/nav-secondary"
 import { NavUser } from "@/components/layout/nav-user"
 import {
   Sidebar,
@@ -31,40 +26,11 @@ const primaryNavItems = [
     title: "Dashboard",
     href: "/dashboard",
     icon: GaugeIcon,
-    isActive: true,
   },
   {
-    title: "Sites",
-    href: "/dashboard#sites",
-    icon: Building2Icon,
-  },
-  {
-    title: "Ingestion",
-    href: "/dashboard#ingestion",
-    icon: RadioTowerIcon,
-  },
-  {
-    title: "Alerts",
-    href: "/dashboard#alerts",
-    icon: BellIcon,
-  },
-  {
-    title: "Audit Trail",
-    href: "/dashboard#audit",
-    icon: HistoryIcon,
-  },
-]
-
-const secondaryNavItems = [
-  {
-    title: "Settings",
-    href: "/dashboard#settings",
-    icon: Settings2Icon,
-  },
-  {
-    title: "Support",
-    href: "/dashboard#support",
-    icon: CircleHelpIcon,
+    title: "Chat",
+    href: "/chat",
+    icon: MessageSquareIcon,
   },
 ]
 
@@ -75,6 +41,15 @@ const currentUser = {
 }
 
 export function AppSidebar(props: ComponentProps<typeof Sidebar>) {
+  const pathname = usePathname()
+  const navItems = primaryNavItems.map((item) => ({
+    ...item,
+    isActive:
+      item.href === "/dashboard"
+        ? pathname === "/" || pathname.startsWith("/dashboard")
+        : pathname.startsWith(item.href),
+  }))
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -93,8 +68,7 @@ export function AppSidebar(props: ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={primaryNavItems} />
-        <NavSecondary items={secondaryNavItems} className="mt-auto" />
+        <NavMain items={navItems} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={currentUser} />

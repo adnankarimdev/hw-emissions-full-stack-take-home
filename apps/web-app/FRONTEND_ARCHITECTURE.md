@@ -5,14 +5,18 @@ The web app uses a feature-first Next.js App Router structure. Routes stay thin 
 ```text
 app/
   dashboard/                  route entry points
+  chat/                       persisted operations chat sessions
+  api/chat/                   AI SDK streaming route and tool orchestration
   providers.tsx               client-side provider composition
 
 components/
   layout/                     app shell, sidebar, header, navigation
   ui/                         shadcn/ui primitives only
+  ai-elements/                AI Elements chat primitives generated into app code
 
 features/
   dashboard/                  dashboard page composition and read models
+  chat/                       operations copilot, renderer catalog, tools, persistence
   ingestion/                  manual ingestion UI and API integration seam
   sites/                      site status UI, API contracts, queries, and types
 
@@ -49,6 +53,39 @@ Dashboard reads expose explicit loading, empty, and error states. Initial site l
 Manual ingestion keeps the last submitted `IngestionBatchDraft` separate from editable form state. This lets an operator change the form while the retry action still resends the exact retained payload and idempotency key from the previous attempt. Successful duplicate retries are surfaced in the dashboard summary as session-level retry telemetry, while backend totals remain the source of truth.
 
 Successful ingestion invalidates the site list, selected site metrics, and per-site emissions trend query. The graph therefore refreshes from persisted measurements instead of maintaining a separate client-side chart model.
+
+## Operations Chat
+
+The chat experience is intentionally implemented as a feature module rather than as ad hoc route code.
+
+```text
+app/chat/[chatId]/page.tsx
+  -> features/chat/components/chat-page.tsx
+  -> features/chat/components/chat-workspace.tsx
+  -> app/api/chat/route.ts
+  -> AI SDK tools
+  -> existing typed feature API clients
+  -> NestJS API
+```
+
+The chat route uses the Vercel AI SDK with AI Gateway. The model id defaults to `openai/gpt-5.5` and can be overridden with `AI_GATEWAY_MODEL`; authentication is handled by `AI_GATEWAY_API_KEY` in the web app environment.
+
+The assistant is not allowed to render arbitrary React. It can call a `renderDashboardUi` tool with a constrained `@json-render/react` spec, and that spec can only reference the local renderer catalog:
+
+- `DashboardOverview`
+- `SummaryCards`
+- `SitesTable`
+- `SiteTrend`
+- `SiteMetrics`
+- `CreateSiteForm`
+- `ManualIngestionForm`
+- small layout primitives: `Stack`, `Surface`, `Text`, `Notice`
+
+Those renderer entries are adapters over existing dashboard, site, and ingestion components. The rendered chat UI therefore uses the same forms, TanStack Query hooks, Zod-validated API clients, loading states, and cache invalidation behavior as the normal dashboard. The model can choose what to show, but it cannot invent a new visual component or bypass frontend domain boundaries.
+
+AI tools follow the same rule: data reads and writes go through the existing feature API clients. `createSite` and `ingestMeasurements` are exposed as explicit mutation tools, and the system prompt requires missing fields and user intent to be resolved before either tool is called. The ingestion tool preserves the platform idempotency contract by requiring an idempotency key and a bounded batch of 1 to 100 readings.
+
+Chat sessions are persisted through `features/chat/server/chat-store.ts`. The current adapter writes JSON under `.data/chats` so local conversations survive app restarts and browser sessions during the take-home review. That directory is git-ignored. For a production Vercel deployment, this adapter should be replaced with a durable store such as the existing Postgres backend because serverless filesystem writes are not a persistence boundary.
 
 Guidelines:
 

@@ -52,6 +52,10 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Local application data
+.data/
+**/.data/
+
 # Package manager caches
 .npm/
 .pnpm-store/

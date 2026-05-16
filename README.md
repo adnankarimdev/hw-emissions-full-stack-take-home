@@ -11,12 +11,13 @@ The implementation focuses on the hard part of the prompt: accepting methane rea
 - `GET /sites/:id/metrics` returns compliance metrics for a site.
 - `GET /sites/:id/emissions-trend` returns a real per-site emissions time series from persisted measurements.
 - The dashboard lists sites, shows compliance metrics, graphs per-site cumulative emissions, supports manual ingestion, and demonstrates retry behavior without double-counting.
+- The operations chat lets an admin ask for live metrics, render dashboard widgets, create sites, and access ingestion workflows through a constrained AI-rendered UI.
 - Successful and error API responses use a consistent platform envelope.
 - Backend architecture uses NestJS modules, service/repository boundaries, a Command/Processor workflow for ingestion, Prisma transactions, and a transactional outbox table.
 
 ## Tech Stack
 
-- Frontend: Next.js App Router, React, TypeScript, shadcn/ui, TanStack Query, Zod
+- Frontend: Next.js App Router, React, TypeScript, shadcn/ui, AI SDK, AI Elements, TanStack Query, Zod
 - Backend: NestJS, TypeScript, Prisma, Zod
 - Database: PostgreSQL
 - Tooling: pnpm workspace, Docker Compose, Jest
@@ -93,6 +94,16 @@ http://localhost:3000/dashboard
 
 By default, the API runs at `http://localhost:3001` and the web app reads from that URL. If you deploy or run the API elsewhere, set `NEXT_PUBLIC_API_BASE_URL` for the web app.
 
+To use the operations chat, add an AI Gateway key to `apps/web-app/.env.local` or your Vercel project settings:
+
+```bash
+AI_GATEWAY_API_KEY=your_gateway_key
+# Optional:
+AI_GATEWAY_MODEL=openai/gpt-5.5
+```
+
+Local chat conversations are written to `.data/chats` under the web app so they survive app restarts. For production Vercel deployments, use a durable database-backed chat store instead of the local filesystem adapter.
+
 Optional DB admin UI:
 
 ```bash
@@ -114,6 +125,12 @@ Use this flow to demonstrate the key product and data-integrity behavior.
 7. Confirm the UI reports the batch as a duplicate-safe retry.
 8. Confirm the site total does not increase on retry.
 9. Confirm the **Duplicate Retries** summary card increments for the session.
+
+Optional chat flow:
+
+1. Open `http://localhost:3000/chat`.
+2. Ask for the dashboard overview or a per-site trend; the assistant renders existing dashboard widgets in the conversation.
+3. Ask to create a site or submit readings; the assistant asks for missing fields before using mutation tools.
 
 The important behavior is that retry sends the exact retained batch payload and idempotency key. The backend returns `duplicate: true` for an identical retry and does not create duplicate measurements or increment `total_emissions_to_date` again.
 
@@ -216,6 +233,7 @@ pnpm build
 | `GET /sites/:id/metrics` analytics | Implemented | Computes compliance status from current total and limit. |
 | `GET /sites/:id/emissions-trend` analytics | Implemented | Builds a per-site UTC daily trend from persisted measurements. |
 | Monitoring dashboard | Implemented | Real per-site trend graph, site list, metrics panel, create-site form, manual ingestion form, retry UX. |
+| Operations chat | Implemented | AI SDK route, persisted sessions, constrained renderer catalog, dashboard read tools, create-site and ingestion tools. |
 | Command/Processor architecture | Implemented | Ingestion workflow is modeled as command plus processor. |
 | Transactional outbox | Implemented | Outbox event is written in the ingestion transaction. |
 | Concurrency protection | Implemented | Site totals use database-level atomic increment inside the transaction. |
