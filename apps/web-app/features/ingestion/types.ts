@@ -2,6 +2,7 @@ export type MeasurementReadingDraft = {
   measuredAt: string
   methaneKg: number
   sourceId: string
+  metadata?: Record<string, unknown>
 }
 
 export type IngestionBatchDraft = {
@@ -12,6 +13,9 @@ export type IngestionBatchDraft = {
 
 export type IngestionResult = {
   batchId: string
+  siteId: string
   acceptedCount: number
   duplicate: boolean
+  totalEmissionsToDate: number
+  complianceStatus: "Within Limit" | "Limit Exceeded"
 }

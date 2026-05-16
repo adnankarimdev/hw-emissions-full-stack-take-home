@@ -36,7 +36,9 @@ Client component
 
 The shared API client unwraps the backend response envelope and validates response data with Zod schemas at the frontend boundary. Components receive normalized camelCase view models instead of raw transport payloads.
 
-Query keys live under `lib/api/query-keys.ts` so invalidation remains consistent. Create-site mutations invalidate the sites query after success instead of manually patching unrelated component state.
+Query keys live under `lib/api/query-keys.ts` so invalidation remains consistent. Create-site and ingestion mutations invalidate the sites query after success instead of manually patching unrelated component state.
+
+The manual ingestion form preserves the submitted batch payload and idempotency key for retry actions. Retrying uses the exact same request body so the backend can demonstrate duplicate-safe handling without the frontend inventing its own deduplication behavior.
 
 Guidelines:
 

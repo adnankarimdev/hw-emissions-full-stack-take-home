@@ -12,7 +12,7 @@ import {
 import { DashboardShell } from "@/components/layout/dashboard-shell"
 import { DashboardSummaryCards } from "@/features/dashboard/components/dashboard-summary-cards"
 import { EmissionsTrendPlaceholder } from "@/features/dashboard/components/emissions-trend-placeholder"
-import { ManualIngestionFormPlaceholder } from "@/features/ingestion/components/manual-ingestion-form-placeholder"
+import { ManualIngestionForm } from "@/features/ingestion/components/manual-ingestion-form"
 import { SitesOverviewTable } from "@/features/dashboard/components/sites-overview-table"
 import { buildDashboardMetrics } from "@/features/dashboard/lib/dashboard-metrics"
 import { dashboardPlaceholder } from "@/features/dashboard/data/dashboard-placeholder-data"
@@ -36,7 +36,7 @@ export function DashboardPage() {
             <EmissionsTrendPlaceholder data={dashboardPlaceholder.trend} />
             <div className="grid gap-4">
               <CreateSiteForm />
-              <ManualIngestionFormPlaceholder sites={sites} />
+              <ManualIngestionForm sites={sites} />
             </div>
           </div>
           <SitesOverviewTable sites={sites} />
