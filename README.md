@@ -71,6 +71,32 @@ We provide a basic `docker-compose.yml` to reduce setup friction. You are free t
 
 This repository is managed as a pnpm workspace from the repo root. Use pnpm for both `apps/web-app` and `apps/api-server`; do not mix npm lockfiles into either app.
 
+### **Running Tests**
+Run commands from the repository root unless noted otherwise.
+
+```bash
+# Backend unit tests
+pnpm test
+
+# Backend e2e tests
+# Requires Postgres to be running and migrations to be applied.
+docker compose up -d postgres
+pnpm prisma:migrate
+pnpm --filter ./apps/api-server test:e2e
+
+# Backend coverage report
+pnpm --filter ./apps/api-server test:cov
+```
+
+Before submitting changes, run the full verification pass:
+
+```bash
+pnpm test
+pnpm --filter ./apps/api-server test:e2e
+pnpm lint
+pnpm build
+```
+
 ---
 
 ## **📦 What We Are Looking For**
