@@ -45,6 +45,16 @@ export function SitesOverviewTable({ sites }: SitesOverviewTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
+            {sites.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={6}
+                  className="h-24 text-center text-muted-foreground"
+                >
+                  No sites have been created yet.
+                </TableCell>
+              </TableRow>
+            ) : null}
             {sites.map((site) => {
               const limitUsed = site.totalEmissionsKg / site.emissionLimitKg
 

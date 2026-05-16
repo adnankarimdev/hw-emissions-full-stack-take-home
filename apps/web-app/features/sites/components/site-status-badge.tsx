@@ -10,15 +10,11 @@ const statusConfig: Record<
     variant: ComponentProps<typeof Badge>["variant"]
   }
 > = {
-  within_limit: {
+  "Within Limit": {
     label: "Within Limit",
     variant: "secondary",
   },
-  approaching_limit: {
-    label: "Approaching Limit",
-    variant: "outline",
-  },
-  limit_exceeded: {
+  "Limit Exceeded": {
     label: "Limit Exceeded",
     variant: "destructive",
   },

@@ -1,7 +1,4 @@
-export type ComplianceStatus =
-  | "within_limit"
-  | "approaching_limit"
-  | "limit_exceeded"
+export type ComplianceStatus = "Within Limit" | "Limit Exceeded"
 
 export type IngestionHealth = "online" | "retrying" | "delayed"
 
@@ -12,7 +9,7 @@ export type SiteSummary = {
   location: string
   emissionLimitKg: number
   totalEmissionsKg: number
-  latestReadingAt: string
+  latestReadingAt: string | null
   status: ComplianceStatus
   ingestionHealth: IngestionHealth
 }

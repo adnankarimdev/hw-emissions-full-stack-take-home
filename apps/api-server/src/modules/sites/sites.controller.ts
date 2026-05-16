@@ -15,6 +15,11 @@ export class SitesController {
     return this.sitesService.createSite(body);
   }
 
+  @Get()
+  listSites() {
+    return this.sitesService.listSites();
+  }
+
   @Get(':id/metrics')
   getSiteMetrics(@Param('id') siteId: string) {
     return this.sitesService.getSiteMetrics(siteId);

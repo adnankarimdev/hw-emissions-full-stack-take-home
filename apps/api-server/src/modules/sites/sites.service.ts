@@ -2,7 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ApplicationError } from '../../shared/errors/application-error';
 import { CreateSiteRequest } from './dto/create-site.dto';
-import { presentComplianceStatus, presentSite } from './sites.presenter';
+import {
+  presentComplianceStatus,
+  presentSite,
+  presentSiteListItem,
+} from './sites.presenter';
 import { SitesRepository } from './sites.repository';
 
 @Injectable()
@@ -17,6 +21,12 @@ export class SitesService {
     });
 
     return presentSite(site);
+  }
+
+  async listSites() {
+    const sites = await this.sitesRepository.list();
+
+    return sites.map(presentSiteListItem);
   }
 
   async getSiteMetrics(siteId: string) {

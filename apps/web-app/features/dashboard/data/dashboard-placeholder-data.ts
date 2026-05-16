@@ -49,7 +49,7 @@ export const dashboardPlaceholder: DashboardSnapshot = {
       emissionLimitKg: 12_000,
       totalEmissionsKg: 9_420,
       latestReadingAt: "2026-05-14T15:18:00.000Z",
-      status: "within_limit",
+      status: "Within Limit",
       ingestionHealth: "online",
     },
     {
@@ -60,7 +60,7 @@ export const dashboardPlaceholder: DashboardSnapshot = {
       emissionLimitKg: 8_500,
       totalEmissionsKg: 7_980,
       latestReadingAt: "2026-05-14T15:10:00.000Z",
-      status: "approaching_limit",
+      status: "Within Limit",
       ingestionHealth: "retrying",
     },
     {
@@ -71,7 +71,7 @@ export const dashboardPlaceholder: DashboardSnapshot = {
       emissionLimitKg: 6_200,
       totalEmissionsKg: 7_130,
       latestReadingAt: "2026-05-14T14:47:00.000Z",
-      status: "limit_exceeded",
+      status: "Limit Exceeded",
       ingestionHealth: "delayed",
     },
   ],

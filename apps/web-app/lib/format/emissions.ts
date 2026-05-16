@@ -20,6 +20,10 @@ export function formatPercent(value: number) {
   return percentFormatter.format(value)
 }
 
-export function formatReadingTimestamp(value: string) {
+export function formatReadingTimestamp(value: string | null) {
+  if (!value) {
+    return "No readings"
+  }
+
   return dateTimeFormatter.format(new Date(value))
 }

@@ -29,6 +29,22 @@ export class SitesRepository {
     });
   }
 
+  list(client: DatabaseClient = this.prisma) {
+    return client.site.findMany({
+      include: {
+        measurements: {
+          orderBy: {
+            measuredAt: 'desc',
+          },
+          take: 1,
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
   incrementTotalEmissions(
     siteId: string,
     amount: Prisma.Decimal,

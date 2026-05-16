@@ -35,7 +35,11 @@ export function ManualIngestionFormPlaceholder({
         <form className="grid gap-4">
           <div className="grid gap-2">
             <Label htmlFor="site-id">Site ID</Label>
-            <Input id="site-id" readOnly defaultValue={defaultSite?.id ?? ""} />
+            <Input
+              id="site-id"
+              readOnly
+              value={defaultSite?.id ?? "Create a site first"}
+            />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="idempotency-key">Idempotency Key</Label>
