@@ -7,7 +7,7 @@ This API is a modular NestJS monolith using a Command/Processor pattern for appl
 ```text
 src/
   modules/
-    sites/                    asset management and site metrics
+    sites/                    asset management, site metrics, and per-site analytics
     ingestion/                batch ingestion use case
       commands/               immutable use-case input objects
       processors/             transaction orchestration and business workflow
@@ -46,6 +46,8 @@ The data model is derived from the required workflows and consistency guarantees
 - `OutboxEvent` records domain events in the same transaction as the ingestion write. This supports reliable downstream processing for alerting, analytics, notifications, or future integrations without coupling those concerns to the request path.
 
 The most important modeling choice is that `sites.total_emissions_to_date` is stored as a denormalized summary while `measurements` remain the source of truth. This gives `GET /sites/:id/metrics` a fast read path without sacrificing auditability or the ability to recalculate totals if business rules change later.
+
+`GET /sites/:id/emissions-trend` intentionally reads from `measurements` rather than from dashboard mock data. It returns UTC daily points for one site, including daily methane totals, a cumulative emissions line, the configured site limit, and the compliance status for each point. The service calculates the pre-window baseline first, then adds each day's measurements so a seven-day graph still reflects the site's full cumulative history.
 
 Compliance status is intentionally computed at read time instead of persisted:
 

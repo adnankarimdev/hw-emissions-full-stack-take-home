@@ -1,6 +1,10 @@
 import { z } from "zod"
 
-import type { SiteMetrics, SiteSummary } from "@/features/sites/types"
+import type {
+  SiteEmissionsTrend,
+  SiteMetrics,
+  SiteSummary,
+} from "@/features/sites/types"
 
 const complianceStatusSchema = z.enum(["Within Limit", "Limit Exceeded"])
 const siteMetadataSchema = z.record(z.string(), z.unknown()).catch({})
@@ -34,9 +38,29 @@ export const backendSiteMetricsSchema = z.object({
   compliance_status: complianceStatusSchema,
 })
 
+export const backendSiteEmissionsTrendSchema = z.object({
+  site_id: z.string(),
+  days: z.coerce.number(),
+  start_date: z.string(),
+  end_date: z.string(),
+  timezone: z.string(),
+  points: z.array(
+    z.object({
+      date: z.string(),
+      methane_kg: z.coerce.number(),
+      cumulative_emissions_to_date: z.coerce.number(),
+      emission_limit: z.coerce.number(),
+      compliance_status: complianceStatusSchema,
+    })
+  ),
+})
+
 type BackendSite = z.infer<typeof backendSiteSchema>
 type BackendCreatedSite = z.infer<typeof backendCreatedSiteSchema>
 type BackendSiteMetrics = z.infer<typeof backendSiteMetricsSchema>
+type BackendSiteEmissionsTrend = z.infer<
+  typeof backendSiteEmissionsTrendSchema
+>
 
 export function toSiteSummary(site: BackendSite): SiteSummary {
   return {
@@ -69,6 +93,25 @@ export function toSiteMetrics(metrics: BackendSiteMetrics): SiteMetrics {
     emissionLimitKg: metrics.emission_limit,
     totalEmissionsKg: metrics.total_emissions_to_date,
     status: metrics.compliance_status,
+  }
+}
+
+export function toSiteEmissionsTrend(
+  trend: BackendSiteEmissionsTrend
+): SiteEmissionsTrend {
+  return {
+    siteId: trend.site_id,
+    days: trend.days,
+    startDate: trend.start_date,
+    endDate: trend.end_date,
+    timezone: trend.timezone,
+    points: trend.points.map((point) => ({
+      date: point.date,
+      methaneKg: point.methane_kg,
+      cumulativeEmissionsKg: point.cumulative_emissions_to_date,
+      emissionLimitKg: point.emission_limit,
+      status: point.compliance_status,
+    })),
   }
 }
 

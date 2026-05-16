@@ -41,6 +41,21 @@ type SiteMetricsResponse = {
   compliance_status: string;
 };
 
+type SiteEmissionsTrendResponse = {
+  site_id: string;
+  days: number;
+  start_date: string;
+  end_date: string;
+  timezone: string;
+  points: Array<{
+    date: string;
+    methane_kg: number;
+    cumulative_emissions_to_date: number;
+    emission_limit: number;
+    compliance_status: string;
+  }>;
+};
+
 describe('Emissions API (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaService;
@@ -97,13 +112,15 @@ describe('Emissions API (e2e)', () => {
     const siteId = createdSite.data.id;
     createdSiteIds.push(siteId);
 
+    const measuredAt = new Date();
+    const measuredAtDateKey = measuredAt.toISOString().slice(0, 10);
     const payload = {
       site_id: siteId,
       idempotency_key: `e2e-${Date.now()}`,
       readings: [
         {
           source_id: 'sensor-e2e-1',
-          measured_at: '2026-05-16T06:45:00.000Z',
+          measured_at: measuredAt.toISOString(),
           methane_kg: 42.5,
           metadata: {
             submitted_by: 'e2e-test',
@@ -175,6 +192,26 @@ describe('Emissions API (e2e)', () => {
       site_id: siteId,
       emission_limit: 1000,
       total_emissions_to_date: 42.5,
+      compliance_status: 'Within Limit',
+    });
+
+    const trendResponse = await request(app.getHttpServer())
+      .get(`/sites/${siteId}/emissions-trend?days=7`)
+      .expect(200);
+    const trend =
+      trendResponse.body as ApiSuccessEnvelope<SiteEmissionsTrendResponse>;
+
+    expect(trend.data).toMatchObject({
+      site_id: siteId,
+      days: 7,
+      timezone: 'UTC',
+    });
+    expect(trend.data.points).toHaveLength(7);
+    expect(trend.data.points.at(-1)).toMatchObject({
+      date: measuredAtDateKey,
+      methane_kg: 42.5,
+      cumulative_emissions_to_date: 42.5,
+      emission_limit: 1000,
       compliance_status: 'Within Limit',
     });
   });

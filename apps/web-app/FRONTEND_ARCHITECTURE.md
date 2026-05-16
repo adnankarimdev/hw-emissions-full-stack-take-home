@@ -38,13 +38,17 @@ The shared API client unwraps the backend response envelope and validates respon
 
 Query keys live under `lib/api/query-keys.ts` so invalidation remains consistent. Create-site and ingestion mutations invalidate the sites query after success instead of manually patching unrelated component state.
 
-The site metrics panel calls `GET /sites/:id/metrics` directly through `useSiteMetricsQuery`. The manual ingestion form preserves the submitted batch payload and idempotency key for retry actions. Retrying uses the exact same request body so the backend can demonstrate duplicate-safe handling without the frontend inventing its own deduplication behavior.
+The site metrics panel calls `GET /sites/:id/metrics` directly through `useSiteMetricsQuery`. The emissions trend card calls `GET /sites/:id/emissions-trend` through `useSiteEmissionsTrendQuery` and owns its site selector so the graph always represents one explicit asset.
+
+The manual ingestion form preserves the submitted batch payload and idempotency key for retry actions. Retrying uses the exact same request body so the backend can demonstrate duplicate-safe handling without the frontend inventing its own deduplication behavior.
 
 ## Resilience UX
 
 Dashboard reads expose explicit loading, empty, and error states. Initial site loading renders skeleton rows and metric placeholders so zero-valued operational data is not confused with data that has not loaded yet.
 
 Manual ingestion keeps the last submitted `IngestionBatchDraft` separate from editable form state. This lets an operator change the form while the retry action still resends the exact retained payload and idempotency key from the previous attempt. Successful duplicate retries are surfaced in the dashboard summary as session-level retry telemetry, while backend totals remain the source of truth.
+
+Successful ingestion invalidates the site list, selected site metrics, and per-site emissions trend query. The graph therefore refreshes from persisted measurements instead of maintaining a separate client-side chart model.
 
 Guidelines:
 

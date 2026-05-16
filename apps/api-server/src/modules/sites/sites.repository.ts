@@ -45,6 +45,48 @@ export class SitesRepository {
     });
   }
 
+  sumMeasurementsBefore(
+    siteId: string,
+    before: Date,
+    client: DatabaseClient = this.prisma,
+  ) {
+    return client.measurement.aggregate({
+      where: {
+        siteId,
+        measuredAt: {
+          lt: before,
+        },
+      },
+      _sum: {
+        methaneKg: true,
+      },
+    });
+  }
+
+  listMeasurementsInRange(
+    siteId: string,
+    start: Date,
+    end: Date,
+    client: DatabaseClient = this.prisma,
+  ) {
+    return client.measurement.findMany({
+      where: {
+        siteId,
+        measuredAt: {
+          gte: start,
+          lt: end,
+        },
+      },
+      select: {
+        measuredAt: true,
+        methaneKg: true,
+      },
+      orderBy: {
+        measuredAt: 'asc',
+      },
+    });
+  }
+
   incrementTotalEmissions(
     siteId: string,
     amount: Prisma.Decimal,

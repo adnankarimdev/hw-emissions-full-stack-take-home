@@ -17,6 +17,9 @@ export function useIngestMeasurementsMutation() {
         queryClient.invalidateQueries({
           queryKey: queryKeys.sites.metrics(result.siteId),
         }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.sites.emissionsTrendAll(result.siteId),
+        }),
       ])
     },
   })

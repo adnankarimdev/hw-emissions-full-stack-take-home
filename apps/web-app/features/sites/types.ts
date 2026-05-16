@@ -27,3 +27,20 @@ export type SiteMetrics = {
   emissionLimitKg: number
   status: ComplianceStatus
 }
+
+export type SiteEmissionsTrendPoint = {
+  date: string
+  methaneKg: number
+  cumulativeEmissionsKg: number
+  emissionLimitKg: number
+  status: ComplianceStatus
+}
+
+export type SiteEmissionsTrend = {
+  siteId: string
+  days: number
+  startDate: string
+  endDate: string
+  timezone: string
+  points: SiteEmissionsTrendPoint[]
+}
