@@ -65,7 +65,7 @@ apps/
       api/
       config/
       format/
-      
+
 docker-compose.yml            local Postgres, Redis, optional pgAdmin
 package.json                  root pnpm workspace scripts
 ```
@@ -74,8 +74,6 @@ Architecture notes:
 
 - System overview: [ARCHITECTURE.md](ARCHITECTURE.md)
 - Senior/Lead bonus coverage: [BEST_PRACTICES.md](BEST_PRACTICES.md)
-- Backend: [apps/api-server/BACKEND_ARCHITECTURE.md](apps/api-server/BACKEND_ARCHITECTURE.md)
-- Frontend: [apps/web-app/FRONTEND_ARCHITECTURE.md](apps/web-app/FRONTEND_ARCHITECTURE.md)
 
 ## Prerequisites
 
