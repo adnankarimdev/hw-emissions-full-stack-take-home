@@ -71,7 +71,7 @@ export function SiteEmissionsTrendCard({
   const trendQuery = useSiteEmissionsTrendQuery(effectiveSiteId, trendDays)
 
   return (
-    <Card className="self-start">
+    <Card className="self-start overflow-x-auto">
       <CardHeader className="gap-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
