@@ -69,6 +69,7 @@ pnpm install
 # 2. Create environment files
 cp .env.example .env
 cp apps/api-server/.env.example apps/api-server/.env
+cp apps/web-app/.env.example apps/web-app/.env.local
 
 # 3. Start local infrastructure
 docker compose up -d postgres redis
