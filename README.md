@@ -45,6 +45,7 @@ package.json                  root pnpm workspace scripts
 
 Architecture notes:
 
+- System overview: [ARCHITECTURE.md](ARCHITECTURE.md)
 - Backend: [apps/api-server/BACKEND_ARCHITECTURE.md](apps/api-server/BACKEND_ARCHITECTURE.md)
 - Frontend: [apps/web-app/FRONTEND_ARCHITECTURE.md](apps/web-app/FRONTEND_ARCHITECTURE.md)
 
@@ -232,35 +233,6 @@ pnpm --filter ./apps/api-server test:e2e
 pnpm lint
 pnpm build
 ```
-
-## Requirement Checklist
-
-| Requirement | Status | Notes |
-| --- | --- | --- |
-| `POST /sites` asset management | Implemented | Stores `emission_limit`, metadata, and denormalized total. |
-| Unified API responses/errors | Implemented | Global response interceptor and exception filter. |
-| `POST /ingest` batch ingestion | Implemented | Accepts up to 100 readings through Zod validation. |
-| Atomic transaction | Implemented | Batch row, measurements, site total increment, and outbox event are written in one Prisma transaction. |
-| Retry/network resilience | Implemented | Unique `(site_id, idempotency_key)` plus request hash prevents duplicate records and double-counting. |
-| `GET /sites/:id/metrics` analytics | Implemented | Computes compliance status from current total and limit. |
-| `GET /sites/:id/emissions-trend` analytics | Implemented | Builds a per-site UTC daily trend from persisted measurements. |
-| Monitoring dashboard | Implemented | Real per-site trend graph, site list, metrics panel, create-site form, manual ingestion form, retry UX. |
-| Operations chat | Implemented | AI SDK route, Postgres-backed sessions, constrained renderer catalog, dashboard read tools, create-site and ingestion tools. |
-| Reviewer simulation | Implemented | `/simulation` creates an isolated site and fires concurrent ingestion requests against the real backend. |
-| Command/Processor architecture | Implemented | Ingestion workflow is modeled as command plus processor. |
-| Transactional outbox | Implemented | Outbox event is written in the ingestion transaction. |
-| Concurrency protection | Implemented | Same-site ingestion uses pessimistic row locking plus an atomic increment inside the transaction. |
-| Type-safe boundaries | Implemented | Backend and frontend validate API inputs/outputs with Zod schemas. |
-| Tests | Implemented | Backend unit tests and e2e test cover idempotency and metrics. |
-
-## Key Tradeoffs
-
-- `total_emissions_to_date` is denormalized on `sites` for fast dashboard and metrics reads, while `measurements` remain the auditable source records.
-- The trend endpoint uses `measurements` as the source of truth and includes a baseline before the selected window, so cumulative graph values stay consistent even when the requested window is shorter than the site's full history.
-- Compliance status is computed at read time instead of persisted, avoiding stale status when limits or totals change.
-- Idempotency is enforced in the database, not only in application memory, so retries remain safe across server restarts or multiple API instances.
-- The frontend tracks duplicate retries as session-level demo telemetry. Backend totals and persisted batch records remain the source of truth.
-- Redis is available locally but not required for the core correctness path; PostgreSQL constraints and transactions handle idempotency and atomicity.
 
 ## Useful Commands
 
