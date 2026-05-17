@@ -28,17 +28,44 @@ The implementation focuses on the hard part of the prompt: accepting methane rea
 
 ```text
 apps/
-  api-server/                 NestJS API, Prisma schema, migrations, tests
+  api-server/
     prisma/
-    src/modules/
-    src/shared/
+      schema.prisma
+      migrations/
+    src/
+      modules/
+        sites/
+        ingestion/
+        outbox/
+        chat/
+      shared/
+        database/
+        errors/
+        responses/
+        transactions/
+        validation/
 
-  web-app/                    Next.js dashboard
+  web-app/
     app/
+      dashboard/
+      chat/
+      simulation/
+      api/chat/
     components/
+      layout/
+      ui/
+      ai-elements/
     features/
+      dashboard/
+      sites/
+      ingestion/
+      chat/
+      simulation/
     lib/
-
+      api/
+      config/
+      format/
+      
 docker-compose.yml            local Postgres, Redis, optional pgAdmin
 package.json                  root pnpm workspace scripts
 ```
